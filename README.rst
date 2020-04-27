@@ -113,13 +113,13 @@ Messages
 --------
 
 View all implemented messages.
-.. code-block::
+.. code-block:: python3
 
     from pyvdms import messages
     messages.index()
 
 Create and inspect a message.
-.. code-block::
+.. code-block:: python3
 
     msg = msg.Chan_status(starttime='2020-02-02', station='I18*', channel='*')
     msg
@@ -131,28 +131,28 @@ Request
 
 Init a request.
 
-.. code-block::
+.. code-block:: python3
 
     from pyvdms import Request
     request = Request(msg)
 
 Get the request message
-.. code-block::
+.. code-block:: python3
 
     request.message
 
 Create an empty request
-.. code-block::
+.. code-block:: python3
 
     request = Request(None)
 
 Set (or update) and get the request
-.. code-block::
+.. code-block:: python3
 
     request.message = message.Chan_status(starttime='2020-02-02', station='I18*')
 
 Submit the request.
-.. code-block::
+.. code-block:: python3
 
     request.submit()
 
@@ -161,23 +161,23 @@ is created per request and immediately removed after the request is completed
 (also on fail).
 
 Get the status of the request.
-.. code-block::
+.. code-block:: python3
 
     request.status
 
 Or a full overview.
-.. code-block::
+.. code-block:: python3
 
     request
 
 The logs of the `nms_client` request are wrapped in the object as well.
-.. code-block::
+.. code-block:: python3
 
     request.log
 
 Re-send the request and only change the station (or any other variable).
 
-.. code-block::
+.. code-block:: python3
 
     request.message.station='I37*'
     request.submit()
@@ -187,23 +187,23 @@ Client - NMS Client as a service
 --------------------------------
 
 An **obspy.clients** like service of the `nms_client` command line client.
-.. code-block::
+.. code-block:: python3
 
     from pyvdms import Client
     client = Client()
 
 Get the station inventory:
-.. code-block::
+.. code-block:: python3
     client.get_stations(station='I37*', channel='*')
 
 Request waveforms for the given station, channel and starttime (and endtime, if given).
-.. code-block::
+.. code-block:: python3
 
     st = client.get_waveforms(station='I37*', channel='BDF', starttime=UTCDateTime())
     st.plot()
 
 If something goes wrong you can always inspect the last request object.
-.. code-block::
+.. code-block:: python3
 
     client.last_request
 
@@ -217,7 +217,7 @@ skipped. If your SDS archive contains gaps then first the status will be
 requested. If no status information is returned and the gap length exceeds the
 `force_request_threshold` then the entire day will be (re-) downloaded.
 
-.. code-block::
+.. code-block:: python3
 
     from pyvdms.nms_client import waveforms2SDS
     from obspy import UTCDateTime
