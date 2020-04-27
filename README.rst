@@ -250,9 +250,7 @@ requested. If no status information is returned and the gap length exceeds the
         if resp.completed:
             print('Request completed.')
         elif resp.quota_exceeded:
-            print('Quota reached. '
-                  'You should continue the same request from {} onwards.'
-                  .format(resp.time))
+            print(f'Quota limit exceeded. Continue from {resp.time} onwards.')
     else:
         print('An error occurred during the request')
         print(resp.error)
