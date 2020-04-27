@@ -128,7 +128,7 @@ Create and inspect a message.
 Each message class has its dedicated parameters and its own docstring.
 
 
-Request
+Request 
 -------
 
 Init a request.
@@ -192,10 +192,11 @@ Re-send the request and only change the station (or any other variable).
     request.submit()
 
 
-Client - NMS Client as a service
---------------------------------
+Client
+------
 
-An **obspy.clients** like service of the `nms_client` command line client.
+A client object wrapping the various VDMS messages and request as dedicated
+functions.
 
 .. code-block:: python3
 
@@ -205,14 +206,15 @@ An **obspy.clients** like service of the `nms_client` command line client.
 Get the station inventory:
 
 .. code-block:: python3
-    client.get_stations(station='I37*', channel='*')
+    inv = client.get_stations(station='I37*', channel='*')
+    inv
 
-Request waveforms for the given station, channel and starttime (and endtime, if given).
+Request waveforms for the given station, channel and start time and end time.
 
 .. code-block:: python3
 
     st = client.get_waveforms(station='I37*', channel='BDF', starttime=UTCDateTime())
-    st.plot()
+    fig = st.plot()
 
 If something goes wrong you can always inspect the last request object.
 
@@ -221,8 +223,8 @@ If something goes wrong you can always inspect the last request object.
     client.last_request
 
 
-waveforms2SDS - Automatic waveform retrieval for your local SDS archive
------------------------------------------------------------------------
+pyvdms.filesystem - automatic waveform retrieval for your local SDS archive
+---------------------------------------------------------------------------
 
 Automatically download waveforms per day and add them to the SDS archive. If
 waveforms for a specifc station and channel already exist then these are
@@ -256,7 +258,7 @@ requested. If no status information is returned and the gap length exceeds the
         print(resp.error)
 
 
-client_jobber -  a waveforms2SDS scheduling service
+pyvdms.jobber - a waveforms2SDS scheduling service
 ---------------------------------------------------
 Instead of manually starting `waveforms2SDS` requests or daily continuing long
 requests that are stalled due to quota limitations, requests can be defined
@@ -266,7 +268,7 @@ Checkout `pyvmds-scheduler` for a cron triggered CLI for waveforms2SDS requests.
 
 .. code-block:: python3
 
-    pyvdms.jobber import Job, Joblist
+    pyvdms.jobber import Job, Queue
 
 A `job` contains all arguments of  `waveforms2SDS` with additional job-parameters
 as the id, priority, user and status  information.
@@ -355,10 +357,10 @@ and simply read again.
 .. code-block:: python3
 
 
-    queue = Joblist('jobs.lock')
+    queue = Queue('jobs.lock')
 
 
-Some helper functions get pre-filtered lists from the `Joblist` class.
+Some helper functions get pre-filtered lists from the `Queue` class.
 
 .. code-block:: python3
 
