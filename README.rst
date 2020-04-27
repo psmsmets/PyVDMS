@@ -74,8 +74,8 @@ Path
 ----
 
 Define the `CLIENT_SCHEDULER_HOME` variable in your default bash environment if
-you would like to make use of the `client_scheduler` tool to crontab requests
-using a prioritized joblist.
+you would like to make use of the `pyvmds-scheduler` tool to crontab requests
+using a prioritized queue.
 
 .. code-block:: console
 
@@ -232,7 +232,7 @@ requested. If no status information is returned and the gap length exceeds the
 
 .. code-block:: python3
 
-    from pyvdms.nms_client import waveforms2SDS
+    from pyvdms import waveforms2SDS
     from obspy import UTCDateTime
 
     resp = waveforms2SDS(
@@ -241,7 +241,7 @@ requested. If no status information is returned and the gap length exceeds the
         station = 'I18*',
         channel = '*',
         sds_root = 'path_to_your_sds_archive',
-        force_request_threshold = 300.,
+        force_request = 300.,
         request_limit = '2GB',
     )
     if resp.success:
@@ -260,183 +260,240 @@ client_jobber -  a waveforms2SDS scheduling service
 ---------------------------------------------------
 Instead of manually starting `waveforms2SDS` requests or daily continuing long
 requests that are stalled due to quota limitations, requests can be defined
-as a `job` and added to the `joblist` for automatic scheduling.
-Checkout `client_scheduler` for a cron triggered CLI for waveforms2SDS requests.
+as a `job` and added to the `queue` for automatic scheduling.
+Checkout `pyvmds-scheduler` for a cron triggered CLI for waveforms2SDS requests.
 
-```python
-from pyvdms.client_jobber import Job, Joblist
-```
+
+.. code-block:: python3
+
+    pyvdms.jobber import Job, Joblist
+
 A `job` contains all arguments of  `waveforms2SDS` with additional job-parameters
 as the id, priority, user and status  information.
-```python
-job = Job(
-    starttime = '2019-10-01',
-    endtime = '2019-10-31',
-    station = 'I18*',
-    channel = '*',
-    sds_root = '~/WaveformArchive',
-    priority = 1,
-    force_request_threshold = 30., # in seconds
-    max_request_size = '1GB'
-)
-```
+
+
+.. code-block:: python3
+
+    job = Job(
+        starttime = '2019-10-01',
+        endtime = '2019-10-31',
+        station = 'I18*',
+        channel = '*',
+        sds_root = '~/WaveformArchive',
+        priority = 1,
+        force_request_threshold = 30., # in seconds
+        max_request_size = '1GB'
 
 Examine the job.
-```python
-print(job)
-```
 
-Modify a  job.
-```python
-job.update(priority=5)
-```
+.. code-block:: python3
+
+    job
+
+Modify a job.
+
+
+.. code-block:: python3
+
+    job.update(priority=5)
 
 Start the job.
-```python
-job.process()
-```
 
-Create a new joblist and add the previously created job.
-```python
-joblist = Joblist()
-joblist.add(job)
-```
 
-Remove a  job from the joblist.
-```python
-joblist.remove(job)
-```
+.. code-block:: python3
 
-Find a  specific job from the joblist.
-```python
-job = joblist.find(id='...')
-```
+    job.process()
 
-Get the first scheduled job with the highest priority on the joblist.
-```python
-joblist.first
-```
+Create a new queue and add the previously created job.
 
-Print the joblist.
-```python
-print(joblist)
-```
-Note that a `content_hash` is created to prevent manual modification of the joblist and so each job.
 
-The joblist can be stored as a  json file.
-```python
-joblist.write_lock('jobs.lock')
-```
+.. code-block:: python3
+
+    queue = Queue()
+    queue.add(job)
+
+
+Remove a  job from the queue.
+
+.. code-block:: python3
+
+    queue.remove(job)
+
+
+Find a  specific job from the queue.
+
+.. code-block:: python3
+
+    job = queue.find(id='...')
+
+
+Get the first scheduled job with the highest priority on the queue.
+
+.. code-block:: python3
+
+    queue.first
+
+
+Print the queue.
+
+.. code-block:: python3
+
+    print(queue)
+
+
+Note that a `content_hash` is created to prevent manual modification of the
+queue and so each job.
+
+The queue can be stored as a json file.
+
+.. code-block:: python3
+
+    queue.write_lock('jobs.lock')
 
 and simply read again.
-```python
-joblist = Joblist('jobs.lock')
-```
+
+.. code-block:: python3
+
+
+    queue = Joblist('jobs.lock')
+
 
 Some helper functions get pre-filtered lists from the `Joblist` class.
-```python
-joblist.list_job_ids() # a list of job ids
-joblist.scheduled() # all scheduled jobs
-joblist.processing() # all processing jobs
-```
+
+.. code-block:: python3
+
+    queue.list_job_ids()  # a list of job ids
+    queue.scheduled()     # all scheduled jobs
+    queue.processing()    # all processing jobs
+
+
 
 pyvdms-scheduler - a cron triggered CLC for waveforms2SDS requests
 ------------------------------------------------------------------
+
 Check all options using.
-```shell
-$ client_scheduler help
 
-client_scheduler <action> [-d<dir> -j<job> -s<status> -u<user> -h] [args]
-Actions : list, add, cancel, clean, cron:stop, cron:start, cron:restart, cron:info, cron:run, run, reset, info, update, logs, defaults, version, help
-Options:
--d,--dir=<homedir>
--j,--job=<job>
--s,--status=<status>
--u,--user=<user>
--h,--help
-```
-Make sure you set the environment variable `$CLIENT_SCHEDULER_HOME`. This folder contains three files: defaults.json, joblist.lock, and  log.txt.
 
-You can preset default values in the defaults.json file.
-```json
-{
-    "starttime": "yesterday",
-    "channel": "??F",
-    "sds_root": "path_to_your_sds_archive"
-}
-```
-Possible variables are: *starttime, endtime, station, channel, sds_root, priority, max_request_size, email, client, client_kwargs*.
+.. code-block:: shell
+
+    pyvmds-scheduler help
+
+Make sure you set the environment variable ``$CLIENT_SCHEDULER_HOME``. This
+folder contains three files: defaults.json, queue.lock, and  log.txt.
+
+You can preset default values in the ``defaults.json`` file.
+
+.. code-block:: json
+
+    {
+        "starttime": "yesterday",
+        "channel": "??F",
+        "sds_root": "path_to_your_sds_archive"
+    }
+
+
+Possible variables are: *starttime, endtime, station, channel, sds_root,
+priority, max_request_size, email, client, client_kwargs*.
 
 Test parsing the default variables by running.
-```shell
-$ client_scheduler defaults
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler defaults
+
+
 These parameters can always overruled when adding a new job.
 
 Add a new job
-```shell
-$ client_scheduler add station='I45*' priority=5 starttime='yesterday'
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler add station='I45*' priority=5 starttime='yesterday'
+
 
 List all jobs in the queue
-```shell
-$ client_scheduler list
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler list
+
+
 You can filter the list with `--status=<status>` and/or `--user=<user>`.
 
 Examine a  job by it's id `<job>`
-```shell
-$ client_scheduler info --job=<job>
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler info --job=<job>
+
+
 or
-```shell
-$ client_scheduler info -<job>
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler info -<job>
 
 Change the quota or priority of an existing job.
-```shell
-$ client_scheduler update --job=<job> max_request_size='3GB' priority=10
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler update --job=<job> max_request_size='3GB' priority=10
 
 Cancel a job.
-```shell
-$ client_scheduler cancel --job=<job>
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler cancel --job=<job>
 
 Remove completed  jobs from the queue
-```shell
-$ client_scheduler clean
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler clean
 
 Start processing the jobqueue.
-```shell
-$ client_scheduler run
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler run
+
 
 Run a specific job from the queue.
-```shell
-$ client_scheduler run --job=<job>
-```
+
+.. code-block:: shell
+
+pyvmds-scheduler run --job=<job>
+
 
 View the logs.
-```shell
-$ client_scheduler logs
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler logs
+
 
 Re-schedule jobs that were halted due to errors.
-```shell
-$ client_scheduler reset
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler reset
 
 Self activate processing the jobqueue using a crontab.
-```shell
-$ client_scheduler cron:start
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler cron:start
+
+
 Stop/remove the crontab.
-```shell
-$ client_scheduler cron:stop
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler cron:stop
+
+
 List the crontab command.
-```shell
-$ client_scheduler cron:info
-```
+
+.. code-block:: shell
+
+    pyvmds-scheduler cron:info
