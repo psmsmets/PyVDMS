@@ -122,10 +122,24 @@ Create and inspect a message.
 
 .. code-block:: python3
 
-    msg = msg.Chan_status(starttime='2020-02-02', station='I18*', channel='*')
+    msg = message.Chan_status(starttime='2020-02-02', station='I18*')
     msg
 
 Each message class has its dedicated parameters and its own docstring.
+
+Get and set message parameters:
+
+.. code-block:: python3
+
+    msg.channel = '*F'
+    msg.station = 'I18*'
+
+
+Set the time period
+
+.. code-block:: python3
+
+    msg.set_time(start='2020-02-02', end=3600.)
 
 
 Request 
@@ -160,7 +174,7 @@ Submit the request.
 
 .. code-block:: python3
 
-    request.submit()
+    result = request.submit()
 
 Messages and output files are written to disk in your tmp folder. A new folder
 is created per request and immediately removed after the request is completed
@@ -172,24 +186,24 @@ Get the status of the request.
 
     request.status
 
-Or a full overview.
+Or an overview.
 
 .. code-block:: python3
 
     request
 
-The logs of the `nms_client` request are wrapped in the object as well.
+The full logs of the `nms_client` request are wrapped in the object as well.
 
 .. code-block:: python3
 
-    request.log
+    print(request.logs)
 
 Re-send the request and only change the station (or any other variable).
 
 .. code-block:: python3
 
     request.message.station='I37*'
-    request.submit()
+    result = request.submit()
 
 
 Client
