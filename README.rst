@@ -2,9 +2,9 @@
 PyVDMS - Python Verification Data Messaging System
 **************************************************
 
-**PyVDMS** is an open-source project containing multiple wrappers and
-extensions to the NMS Client to access IMS data and IDC products of the
-Comprehensive Nuclear-Test-Ban Treaty Organization (CTBTO).
+**PyVDMS** A Python version of the VDMS - web-service which allows principal
+users to request IMS data and IDC products for the verification of the
+Comprehensive Nuclear-Test-Ban Treaty (CTBT).
 
 
 Features
@@ -41,7 +41,6 @@ Main pyvdms features listed per submodule:
 
 Installation
 ============
-
 
 Create a clone, or copy of the pyvdms repository
 
