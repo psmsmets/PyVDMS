@@ -113,18 +113,21 @@ Messages
 --------
 
 View all implemented messages.
+
 .. code-block:: python3
 
     from pyvdms import messages
     messages.index()
 
 Create and inspect a message.
+
 .. code-block:: python3
 
     msg = msg.Chan_status(starttime='2020-02-02', station='I18*', channel='*')
     msg
 
 Each message class has its dedicated parameters and its own docstring.
+
 
 Request
 -------
@@ -137,21 +140,25 @@ Init a request.
     request = Request(msg)
 
 Get the request message
+
 .. code-block:: python3
 
     request.message
 
 Create an empty request
+
 .. code-block:: python3
 
     request = Request(None)
 
 Set (or update) and get the request
+
 .. code-block:: python3
 
     request.message = message.Chan_status(starttime='2020-02-02', station='I18*')
 
 Submit the request.
+
 .. code-block:: python3
 
     request.submit()
@@ -161,16 +168,19 @@ is created per request and immediately removed after the request is completed
 (also on fail).
 
 Get the status of the request.
+
 .. code-block:: python3
 
     request.status
 
 Or a full overview.
+
 .. code-block:: python3
 
     request
 
 The logs of the `nms_client` request are wrapped in the object as well.
+
 .. code-block:: python3
 
     request.log
@@ -187,22 +197,26 @@ Client - NMS Client as a service
 --------------------------------
 
 An **obspy.clients** like service of the `nms_client` command line client.
+
 .. code-block:: python3
 
     from pyvdms import Client
     client = Client()
 
 Get the station inventory:
+
 .. code-block:: python3
     client.get_stations(station='I37*', channel='*')
 
 Request waveforms for the given station, channel and starttime (and endtime, if given).
+
 .. code-block:: python3
 
     st = client.get_waveforms(station='I37*', channel='BDF', starttime=UTCDateTime())
     st.plot()
 
 If something goes wrong you can always inspect the last request object.
+
 .. code-block:: python3
 
     client.last_request
@@ -241,6 +255,7 @@ requested. If no status information is returned and the gap length exceeds the
     else:
         print('An error occurred during the request')
         print(resp.error)
+
 
 client_jobber -  a waveforms2SDS scheduling service
 ---------------------------------------------------
