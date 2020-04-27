@@ -110,81 +110,86 @@ Documentation
 Messages
 --------
 
+View all implemented messages.
+.. code-block:: python
+    from pyvdms import messages
+    messages.index()
+
+Create and inspect a message.
+.. code-block:: python
+    msg = msg.Chan_status(starttime='2020-02-02', station='I18*', channel='*')
+    msg
+
+Each message class has its dedicated parameters and its own docstring.
+
 Request
 -------
 
-Get the status of a specific IMS infrasound array.
+Init a request.
 
-```python
-from nms_tools.nms_client import Request
-request = Request('status')
-```
+.. code-block:: python
+    from pyvdms import Request
+    request = Request(msg)
 
-Set the date (or period), station and channel for the status request and submit.
-```python
-from obspy import UTCDateTime
-request.submit(starttime=UTCDateTime(2019, 5, 18), station='I37*', channel='*' )
-```
+Get the request message
+.. code-block:: python
+    request.message
+
+Create an empty request
+.. code-block:: python
+    request = Request(None)
+
+Set (or update) and get the request
+.. code-block:: python
+    request.message = message.Chan_status(starttime='2020-02-02', station='I18*')
+
+Submit the request.
+.. code-block:: python
+    request.submit()
+
+Messages and output files are written to disk in your tmp folder. A new folder
+is created per request and immediately removed after the request is completed
+(also on fail).
 
 Get the status of the request.
-```python
-request.status
-```
+.. code-block:: python
+    request.status
 
-Inspect the actual message that has been sent.
-```python
-print(request.message)
-```
-
-Messages and output files are written to disk in your tmp folder. A new folder is created per request and immediately removed after the request is completed (also on fail). The returned data, if present, is loaded in the `request.result` object.
-
-```python
-request.result
-```
+Or a full overview.
+.. code-block:: python
+    request
 
 The logs of the `nms_client` request are wrapped in the object as well.
-```python
-request.log
-```
+.. code-block:: python
+    request.log
 
 Re-send the request and only change the station (or any other variable).
-```
-request.submit(station='I18*')
-request.result
-```
 
-Manually changing the request message header will initialize the message but will clear all output as it is not yet submitted.
-```python
-request.set_message(starttime=UTCDateTime())
-if request.result:
-    print('This is not happening.')
-```
+.. code-block:: python
+    request.message.station='I37*'
+    request.submit()
 
-### Client - NMS Client as a service
 
-An **obspy.clients** like wrapper for the `nms_client` command line tool.
-```python
-from nms_tools.nms_client import Client
-client = Client()
-```
+Client - NMS Client as a service
+--------------------------------
 
-Request the station inventory (`sta_info` request), however, the `SC3XML` format has errors (missing data) failing obspy to read it. 
-Providing `format=dataframe` requests the related `chan_stat` instead and returns it as a Pandas dataframe.
+An **obspy.clients** like service of the `nms_client` command line client.
+.. code-block:: python
+    from pyvdms import Client
+    client = Client()
 
-```python
-inv = client.get_stations( station='I37*', channel='*', format='dataframe' )
-inv
-```
+Get the station inventory:
+.. code-block:: python
+    client.get_stations(station='I37*', channel='*')
 
 Request waveforms for the given station, channel and starttime (and endtime, if given).
-```python
-st = client.get_waveforms( station="I37*",channel="*", starttime=UTCDateTime() )
-st.plot()
-```
+.. code-block:: python
+    st = client.get_waveforms(station='I37*', channel='BDF', starttime=UTCDateTime())
+    st.plot()
+
 If something goes wrong you can always inspect the last request object.
-```python
-client.last_request.status
-```
+.. code-block:: python
+    client.last_request
 
 
 waveforms2SDS - Automatic waveform retrieval for your local SDS archive
@@ -196,41 +201,41 @@ skipped. If your SDS archive contains gaps then first the status will be
 requested. If no status information is returned and the gap length exceeds the
 `force_request_threshold` then the entire day will be (re-) downloaded.
 
-```python
-from nms_tools.nms_client import Client2SDS
-from obspy import UTCDateTime
+.. code-block:: python
+    from pyvdms.nms_client import waveforms2SDS
+    from obspy import UTCDateTime
 
-resp = Client2SDS(
-    starttime = UTCDateTime(2019, 10, 1),
-    endtime = UTCDateTime(2019, 10, 31),
-    station = 'I18*',
-    channel = '*',
-    sds_root = 'path_to_your_sds_archive',
-    debug = False,
-    force_request_threshold = 300., # force to re-download the entire day if no status is returned and 300s or more are missing in the SDS archive
-    request_limit = '2GB' # if you want to limit the total request size (an approximation!)
-)
-if resp.success:
-    if resp.completed:
-        print('Request completed.')
-    elif resp.quota_exceeded:
-        print('Quota reached. You should continue the same request from {} onwards.'.format(resp.time))
-else:
-    print('An error occurred during the request')
-    print(resp.error)
-```
+    resp = waveforms2SDS(
+        starttime = UTCDateTime(2019, 10, 1),
+        endtime = UTCDateTime(2019, 10, 31),
+        station = 'I18*',
+        channel = '*',
+        sds_root = 'path_to_your_sds_archive',
+        force_request_threshold = 300.,
+        request_limit = '2GB',
+    )
+    if resp.success:
+        if resp.completed:
+            print('Request completed.')
+        elif resp.quota_exceeded:
+            print('Quota reached. '
+                  'You should continue the same request from {} onwards.'
+                  .format(resp.time))
+    else:
+        print('An error occurred during the request')
+        print(resp.error)
 
 client_jobber -  a waveforms2SDS scheduling service
 ---------------------------------------------------
-Instead of manually starting `Client2SDS` requests or daily continuing long
+Instead of manually starting `waveforms2SDS` requests or daily continuing long
 requests that are stalled due to quota limitations, requests can be defined
 as a `job` and added to the `joblist` for automatic scheduling.
-Checkout `client_scheduler` for a cron triggered CLI for Client2SDS requests.
+Checkout `client_scheduler` for a cron triggered CLI for waveforms2SDS requests.
 
 ```python
-from nms_tools.client_jobber import Job, Joblist
+from pyvdms.client_jobber import Job, Joblist
 ```
-A `job` contains all arguments of  `Client2SDS` with additional job-parameters
+A `job` contains all arguments of  `waveforms2SDS` with additional job-parameters
 as the id, priority, user and status  information.
 ```python
 job = Job(

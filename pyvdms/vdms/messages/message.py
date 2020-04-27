@@ -321,7 +321,7 @@ class Message(object):
         lines = []
 
         for result in results:
-             with open(result) as f:
-                 lines += f.readlines()
+            with open(result) as f:
+                lines += f.readlines()
 
         return lines

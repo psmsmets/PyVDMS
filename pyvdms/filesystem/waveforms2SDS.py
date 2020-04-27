@@ -20,17 +20,75 @@ def waveforms2SDS(
     sds_root: str, verbose: bool = True, debug: bool = False,
     logFile: str = None, verify_archive: bool = True,
     force_request: bool = True, force_request_threshold: int = 300,
-    request_limit_bytes: int = None, request_limit: str = None,
+    request_limit=None,
 ):
-    """
+    """Add waveforms to your local SDS archive.
+
+    Parameters:
+    -----------
+
+    station : `str`
+        Select one or more SEED station codes. Multiple codes are
+        comma-separated (e.g. "ANMO,PFO"). Wildcards are allowed.
+
+    channel : `str`
+        Select one or more SEED channel codes. Multiple codes are
+        comma-separated (e.g. "BHZ,HHZ,*N"). Wildcards are allowed.
+
+    starttime : :class:`~obspy.UTCDateTime`
+        Set the start time.
+
+    endtime : :class:`~obspy.UTCDateTime`
+        Set the end time.
+
+    verbose : `bool`, optional
+        Enable verbosity if `True` (default).
+
+    debug : `bool`, optional
+        Enable debug mode if `True`. Defaults to `False`.
+
+    logFile : `str`, optional
+        If given, logs are written to ``logFile``. Defaults to `None`.
+
+    verify_archive : `bool`, optional
+        Verify the local SDS archive consistensty on-the-fly.
+
+    force_request : `bool`, optional
+        Force a request if channel status returns `None` or if data is missing.
+        The missing data threshold can be set with ``force_request_threshold``.
+
+    force_request_threshold : `float`, optional
+        Threshold of missing data per day, in seconds, to trigger a
+        (re-) request. Threshold should be within [0, 86400] seconds.
+
+    request_limit : `int`  or `str`, optional
+        Limit the total request size, in bytes if `int`. A human readable limit
+        can be provided as a string. For example: '2GB'.
+
+    Returns
+    -------
+
+    response : :class:`Response`
+        Response object with a summary.
+
     """
     days = int((endtime - starttime) / 86400) + 1
-    req_bytes_limit = (parse_size(request_limit)
-                       if request_limit else request_limit_bytes)
+
+    request_limit = request_limit or 0
+    if isinstance(request_limit, int):
+        request_limit = request_limit
+    elif isinstance(request_limit, str):
+        request_limit = parse_size(request_limit)
+    else:
+        raise TypeError('Request limit should be of type int or str.')
+
+    # init
     req_bytes = 0
-
     log = Logger(verbose, debug, logFile)
+    request = Request(None)
+    sds_client = SDS_Client(sds_root, sds_type="D", format="MSEED")
 
+    # log header
     log.heading('Waveforms2SDS', 0)
     log.info('      station = {}'.format(station))
     log.info('      channel = {}'.format(channel))
@@ -43,16 +101,13 @@ def waveforms2SDS(
                              'integer ranging from 0 to 86400')
         log.info('    threshold = {} s'.format(force_request_threshold))
 
-    sds_client = SDS_Client(sds_root, sds_type="D", format="MSEED")
-    request = Request(None)
-
     log.info('     sds_root = {}'.format(sds_client.sds_root))
     log.info('         days = {}'.format(days))
     log.info('request limit = {}'.format(
-        format_size(req_bytes_limit) if req_bytes_limit else 'None'
+        format_size(request_limit) if request_limit else 'None'
     ))
 
-    # Get stations and channels
+    # get stations and channels
     log.heading('Request station and channel metadata', 1)
 
     request.message = Channel(station, channel)
@@ -365,13 +420,13 @@ def waveforms2SDS(
                 size_bytes=req_bytes,
             )
 
-        if req_bytes_limit and req_bytes >= req_bytes_limit:
+        if request_limit and req_bytes >= request_limit:
 
             log.heading('Waveforms2SDS terminated', 1)
 
             log.warning(
                 'Total request size of {} exceeds the limit of {}.'
-                .format(format_size(req_bytes), format_size(req_bytes_limit))
+                .format(format_size(req_bytes), format_size(request_limit))
             )
 
             return Response(
