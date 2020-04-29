@@ -6,6 +6,7 @@ from humanfriendly import format_size, parse_size
 
 
 # Relative imports
+from ..util.time import set_time_range
 from ..util.logger import Logger
 from ..vdms.request import Request
 from ..vdms.messages import Channel, Chan_status, Waveform
@@ -16,11 +17,9 @@ __all__ = ['waveforms2SDS']
 
 
 def waveforms2SDS(
-    station: str, channel: str, starttime: UTCDateTime, endtime: UTCDateTime,
-    sds_root: str, verbose: bool = True, debug: bool = False,
-    logFile: str = None, verify_archive: bool = True,
-    force_request: bool = True, force_request_threshold: int = 300,
-    request_limit=None,
+    station: str, channel: str, starttime, endtime, sds_root: str,
+    sds_threshold: float = 300., sds_qc: bool = True, request_limit=None,
+    verbose: bool = True, debug: bool = False, log_file: str = None
 ):
     """Add waveforms to your local SDS archive.
 
@@ -35,11 +34,28 @@ def waveforms2SDS(
         Select one or more SEED channel codes. Multiple codes are
         comma-separated (e.g. "BHZ,HHZ,*N"). Wildcards are allowed.
 
-    starttime : :class:`~obspy.UTCDateTime`
+    starttime : various
         Set the start time.
 
-    endtime : :class:`~obspy.UTCDateTime`
+    endtime : various
         Set the end time.
+
+    sds_root : `str`
+        Path to the local SDS archive.
+
+    sds_threshold : `float`, optional
+        Force a request if the data gap in the SDS archive per day exceeds the
+        threshold ``sds_threshold``, in seconds. The threshold should be within
+        [0, 86400] seconds. If `None`, or -1, no request is forced.
+        Defaults to 300 seconds.
+
+    sds_qc : `bool`, optional
+        Perform a simple quality control of the local SDS archive and correct
+        on-the-fly.
+
+    request_limit : `int`  or `str`, optional
+        Limit the total request size, in bytes if `int`. A human readable limit
+        can be provided as a string. For example: '2GB'.
 
     verbose : `bool`, optional
         Enable verbosity if `True` (default).
@@ -47,23 +63,8 @@ def waveforms2SDS(
     debug : `bool`, optional
         Enable debug mode if `True`. Defaults to `False`.
 
-    logFile : `str`, optional
-        If given, logs are written to ``logFile``. Defaults to `None`.
-
-    verify_archive : `bool`, optional
-        Verify the local SDS archive consistensty on-the-fly.
-
-    force_request : `bool`, optional
-        Force a request if channel status returns `None` or if data is missing.
-        The missing data threshold can be set with ``force_request_threshold``.
-
-    force_request_threshold : `float`, optional
-        Threshold of missing data per day, in seconds, to trigger a
-        (re-) request. Threshold should be within [0, 86400] seconds.
-
-    request_limit : `int`  or `str`, optional
-        Limit the total request size, in bytes if `int`. A human readable limit
-        can be provided as a string. For example: '2GB'.
+    log_file : `str`, optional
+        If given, logs are written to ``log_file``. Defaults to `None`.
 
     Returns
     -------
@@ -72,9 +73,35 @@ def waveforms2SDS(
         Response object with a summary.
 
     """
-    days = int((endtime - starttime) / 86400) + 1
 
+    if not isinstance(station, str):
+        raise TypeError('station should be of type string.')
+
+    if not isinstance(channel, str):
+        raise TypeError('channel should be of type string.')
+
+    # set the time range
+    starttime, endtime = set_time_range(starttime, endtime)
+
+    # date range of full days
+    days = pd.date_range(
+        start=starttime+pd.tseries.offsets.DateOffset(days=0, normalize=True),
+        end=endtime+pd.tseries.offsets.DateOffset(days=0, normalize=True),
+        freq='1D',
+    )
+
+    # sds threshold
+    sds_threshold = sds_threshold or 0.
+
+    if not isinstance(sds_threshold, float):
+        raise TypeError('sds_threshold should be of type float.')
+
+    if sds_threshold < 0 or sds_threshold > 86400:
+        raise ValueError('sds_threshold threshold should be within 0 to 86400')
+
+    # set request limit from bytes or a formatted string
     request_limit = request_limit or 0
+
     if isinstance(request_limit, int):
         request_limit = request_limit
     elif isinstance(request_limit, str):
@@ -82,33 +109,31 @@ def waveforms2SDS(
     else:
         raise TypeError('Request limit should be of type int or str.')
 
-    # init
-    req_bytes = 0
-    log = Logger(verbose, debug, logFile)
+    # init main variables
+    log = Logger(verbose, debug, log_file)
     request = Request(None)
+    request_size = 0
     sds_client = SDS_Client(sds_root, sds_type="D", format="MSEED")
 
-    # log header
-    log.heading('Waveforms2SDS', 0)
-    log.info('      station = {}'.format(station))
-    log.info('      channel = {}'.format(channel))
-    log.info('    starttime = {}'.format(starttime.strftime('%Y-%m-%d')))
-    log.info('      endtime = {}'.format(endtime.strftime('%Y-%m-%d')))
-    log.info('force request = {}'.format(force_request))
-    if force_request:
-        if force_request_threshold < 0 or force_request_threshold >= 86400:
-            raise ValueError('Force request threshold should be a positive '
-                             'integer ranging from 0 to 86400')
-        log.info('    threshold = {} s'.format(force_request_threshold))
-
-    log.info('     sds_root = {}'.format(sds_client.sds_root))
-    log.info('         days = {}'.format(days))
-    log.info('request limit = {}'.format(
+    # log header and parameters
+    log.heading('Waveforms2SDS', 1)
+    log.info(f'       station = {station}')
+    log.info(f'       channel = {channel}')
+    log.info(f'    start time = {days[0]}')
+    log.info(f'      end time = {days[-1]}')
+    log.info(f'          days = {len(days)}')
+    log.info(f'      sds_root = {sds_root}')
+    log.info(f'        sds_qc = {sds_qc}')
+    log.info(f' sds_threshold = {sds_threshold}s')
+    log.info('  request limit = {}'.format(
         format_size(request_limit) if request_limit else 'None'
     ))
 
+    #
     # get stations and channels
-    log.heading('Request station and channel metadata', 1)
+    #
+    log.info('')
+    log.heading('Request station and channel metadata', 2)
 
     request.message = Channel(station, channel)
 
@@ -116,334 +141,269 @@ def waveforms2SDS(
     log.debug(str(request.message))
 
     log.debug('Send the request message.')
-    inventory = request.submit()
+    inv = request.submit()
 
     log.debug('Got an answer.\nThis is the summary.')
     log.debug(str(request))
 
     log.debug('Returned data:')
-    log.debug(str(inventory))
+    log.debug(str(inv))
 
-    req_bytes += request.size_bytes
+    request_size += request.size_bytes
 
-    if not isinstance(inventory, pd.DataFrame):
+    if not isinstance(inv, pd.DataFrame):
         return Response(
             success=False, error='No station information returned.'
         )
 
-    if 'off_date' not in inventory:
-        inventory['off_date'] = None
-
     log.info('stations (#{}): {}'.format(
-        len(inventory.station.unique()),
-        ','.join(list(inventory.station.unique()))
+        len(inv.station.unique()),
+        ','.join(list(inv.station.unique()))
     ))
     log.info('channels (#{}): {}'.format(
-        len(inventory.channel.unique()),
-        ','.join(list(inventory.channel.unique()))
+        len(inv.channel.unique()),
+        ','.join(list(inv.channel.unique()))
     ))
 
-    log.heading('Verify sds archive', 1)
+    #
+    # sds availiability function
+    #
+    def sds_availability(**kwargs):
+        """
+        """
+        avail = sds_client.get_availability_percentage(**kwargs)
 
-    for i in range(days):
+        return avail[0]
 
-        time = starttime + i * 86400
-        tstr = time.strftime('%Y-%m-%d')
+    #
+    # sds qc function
+    #
+    def verify_sds_sampling_rate(sampling_rate, **kwargs):
+        """
+        """
+        st = sds_client.get_waveforms(**kwargs)
 
-        log.heading('Verify sds archive for {} (day {})'
-                    .format(tstr, time.strftime('%j')), 2)
+        inconsistency = False
 
-        status = None
-        requested_status = False
-        request_stations = []
-        request_channels = []
+        for tr in st:
 
-        inventory_at_time = inventory[
-            (inventory.on_date >= tstr) & (inventory.off_date < tstr) |
-            (inventory.off_date.isnull())
-        ]
+            sampling_error = abs(tr.stats.sampling_rate - sampling_rate)
 
-        toFetch = inventory_at_time.to_dict('records')
+            if sampling_error > 0.:
 
-        try:
+                if not inconsistency:
 
-            for item in toFetch:
-
-                avail = sds_client.get_availability_percentage(
-                    network='IM',
-                    station=item['station'],
-                    location='',
-                    channel=item['channel'],
-                    starttime=time,
-                    endtime=time + 86400,
-                )
-
-                log.debug('... {}.{}: {}%'.format(
-                    item['station'], item['channel'], round(avail[0]*100, 3)
-                ))
-
-                doRequest = not (avail[0] > 0)
-
-                if not doRequest:
-
-                    stream = sds_client.get_waveforms(
-                        network='IM',
-                        station=item['station'],
-                        location='',
-                        channel=item['channel'],
-                        starttime=time,
-                        endtime=time + 86400,
+                    log.warning(
+                        '{} sample rate {:.3f} in archive inconsistent with '
+                        'vdms inventory sample rate {:.3f}.'
+                        .format(tr.stats.id, tr.stats.sampling_rate,
+                                sampling_rate)
                     )
 
-                    if verify_archive:
+                if sampling_error > 1e-2:
+                    raise RequestItem
 
-                        sds_inconsistency = False
+                tr.stats.sampling_rate = sampling_rate
+                inconsistency = True
 
-                        for trace in stream:
+        if inconsistency:
+            stream2SDS(st, sds_root, verbose=False)
 
-                            trace.stats.sampling_rate = round(
-                                trace.stats.sampling_rate, 2
-                            )
+    try:
 
-                            if abs(
-                                trace.stats.sampling_rate -
-                                item['sampling_rate']
-                            ) > 1e-2:
+        # evaluate per day
+        for day in days:
 
-                                log.warning(
-                                    ('Trace {}.{} sample rate {} inconsistent '
-                                     'with inventory sample rate {}. '
-                                     'Removed trace from archive.').format(
-                                        item['station'],
-                                        item['channel'],
-                                        trace.stats.sampling_rate,
-                                        item['sampling_rate'],
-                                    )
-                                )
+            # check limit
+            if request_limit and request_size >= request_limit:
+                break
 
-                                stream.remove(trace)
+            # get start and end time
+            t0 = UTCDateTime(day)
+            t1 = t0 + 86400
 
-                                sds_inconsistency = True
+            # construct base argument dictionary
+            day_args = dict(network='IM', location='',
+                            starttime=t0, endtime=t1)
 
-                        if sds_inconsistency:
+            # user feedback
+            log.info('')
+            log.heading('Verify sds archive for {} (day {})'.format(
+                day.strftime('%Y-%m-%d'), day.strftime('%j')), 2
+            )
 
-                            stream2SDS(stream, sds_root, verbose=False)
+            # init day variables
+            day_status = None
+            day_status_requested = False
+            missing_items = []
 
-                    npts_in_day = int(item['sampling_rate'] * 86400)
+            # slice inventory for day
+            day_inv = inv[(inv.on_date <= day) &
+                          ((inv.off_date > day) | (inv.off_date.isnull()))]
 
-                    npts_in_sds = sum([trace.stats.npts for trace in stream])
+            # loop over items in day inventory
+            for item in day_inv.itertuples():
 
-                    if npts_in_sds < 10 * item['sampling_rate']:  # one buffer?
+                # catch SkipItem, RequestItem, and any other error
+                try:
 
-                        doRequest = True
+                    # construct stream argument dictionary
+                    sds_args = dict(**day_args, station=item.station,
+                                    channel=item.channel)
 
-                    elif npts_in_sds < npts_in_day:
+                    # extra analysis if data availability
+                    if sds_qc:
+                        verify_sds_sampling_rate(item.sampling_rate,
+                                                 **sds_args)
 
-                        if not requested_status:
+                    # get availability
+                    sds_avail = sds_availability(**sds_args)
+                    sds_sec = sds_avail * 86400.
 
-                            log.info('... request status')
+                    log.info(
+                        f'... {item.station}.{item.channel}: sds '
+                        f'{sds_avail*100:6.2f}% ({86400-sds_sec:.2f}s)'
+                    )
 
-                            requested_status = True
+                    # go to next item if 100%
+                    if sds_avail == 1:
 
-                            request.message = Chan_status(
-                                station=item['station'][0:3] + '*',
-                                channel='*',
-                                starttime=time,
-                            )
-                            log.debug('Request message:')
-                            log.debug(str(request.message))
+                        raise SkipItem
 
-                            log.debug('Send the request message.')
-                            status = request.submit()
+                    # direct request if no data availability
+                    if not sds_avail > 0:
 
-                            log.debug('Got an answer.\n'
-                                      'This is the summary.')
-                            log.debug(str(request))
+                        raise RequestItem
 
-                            log.debug('Request data:')
-                            log.debug(str(status))
+                    # get availability
+                    if not day_status_requested:
 
-                            req_bytes += request.size_bytes
+                        log.info('... request status for day.')
 
-                            if not isinstance(status, pd.DataFrame):
+                        day_status_requested = True
 
-                                log.warning('Status request returnend None.')
-
-                                if force_request:
-
-                                    log.info('... all waveforms for this day '
-                                             'shall be request if threshold '
-                                             'exceeded.')
-
-                                else:
-
-                                    log.info('... waveform requests for this '
-                                             'day shall be skipped.')
-
-                                    log.debug(request.log)
-
-                                    raise SkipDay
-
-                        npts_in_nms = (
-                            int(sum(status[
-                                (status.station == item['station']) &
-                                (status.channel == item['channel']) &
-                                (status.samples > 0)
-                            ].samples.values))
-                            if isinstance(status, pd.DataFrame) else -1
+                        request.message = Chan_status(
+                            station=item.station[0:3] + '*',
+                            channel='*',
+                            starttime=day,
                         )
+
+                        day_status = request.submit()
+
+                        request_size += request.size_bytes
+
+                        if not isinstance(day_status, pd.DataFrame):
+
+                            log.warning('Status request returned None.')
+                            log.info('... all waveforms for this day shall be '
+                                     'requested if threshold exceeded.')
+
+                    if isinstance(day_status, pd.DataFrame):
+
+                        status = day_status.loc[
+                            (day_status.station == item.station) &
+                            (day_status.channel == item.channel)
+                        ]
+
+                        vdms_sec = (status[['samples']].sum().values[0] /
+                                    item.sampling_rate)
+                        vdms_avail = vdms_sec / 86400
 
                         log.debug(
-                            '... {}.{} day:{} sds:{} nms:{}'.format(
-                                item['station'],
-                                item['channel'],
-                                npts_in_day,
-                                npts_in_sds,
-                                npts_in_nms,
-                            )
+                            f'... {item.station}.{item.channel}: vdms '
+                            f'{vdms_avail*100:6.2f}% ({86400-vdms_sec:.2f}s)'
                         )
 
-                        doRequest = (
-                            npts_in_sds < npts_in_nms or
-                            (force_request and npts_in_day - npts_in_sds >
-                             force_request_threshold*item['sampling_rate'])
-                        )
+                        if vdms_sec - sds_sec > sds_threshold:
 
-                if doRequest:
+                            raise RequestItem
 
-                    item['request'] = True
+                    elif 86400 - sds_sec > sds_threshold:
 
-                    if item['channel'] not in request_channels:
-                        request_channels.append(item['channel'])
+                        raise RequestItem
 
-                    if item['station'] not in request_stations:
-                        request_stations.append(item['station'])
+                except SkipItem:
 
-            if len(request_stations) > 0 and len(request_channels) > 0:
+                    continue
 
-                log.info(
-                    '... request missing data:\n'
-                    '      station = {}\n'
-                    '      channel = {}'
-                    .format(
-                        ','.join(request_stations),
-                        ','.join(request_channels),
-                    )
-                )
+                except RequestItem:
 
-                request.message = Waveform(
-                    station=','.join(request_stations),
-                    channel=','.join(request_channels),
-                    starttime=time,
-                )
+                    missing_items.append(item)
+                    continue
 
-                log.debug('Request message:')
-                log.debug(str(request.message))
+            # Request missing items for day?
+            if len(missing_items) == 0:
 
-                log.debug('Send the request message.')
-                stream = request.submit()
+                continue
 
-                log.debug('Got an answer.\nThis is the summary.')
+            stats = ','.join(set([item.station for item in missing_items]))
+            chans = ','.join(set([item.channel for item in missing_items]))
 
-                log.debug('Request summary:')
-                log.debug(str(request))
+            log.info('... request missing data:')
+            log.info(f'       station = {stats}')
+            log.info(f'       channel = {chans}')
 
-                log.debug('Request data:')
-                log.debug(str(stream))
+            request.message = Waveform(station=stats, channel=chans,
+                                       starttime=day)
 
-                req_bytes += request.size_bytes
+            log.debug('Waveform request message:')
+            log.debug(str(request.message))
 
-                if isinstance(stream, Stream):
+            st = request.submit()
 
-                    for trace in stream:
+            log.debug('Got an answer.\nThis is the summary:')
+            log.debug(str(request))
 
-                        sr = inventory_at_time[
-                            (inventory_at_time.station == trace.stats.station)
-                            &
-                            (inventory_at_time.channel == trace.stats.channel)
-                        ].sampling_rate.values[0]
+            request_size += request.size_bytes
 
-                        trace.stats.sampling_rate = round(
-                            trace.stats.sampling_rate, 2
-                        )
+            if isinstance(st, Stream):
 
-                        if abs(trace.stats.sampling_rate - sr) > 1e-2:
-                            log.warning('Trace sample rate does not match '
-                                        'inventory. Removed trace')
-                            stream.remove(trace)
-
-                if stream:
-
-                    stream2SDS(stream, sds_root, verbose=False)
-
-                    log.info('... added stream to archive')
-
-                else:
-
-                    log.info('... no data returned')
-
-                log.info('... request size is {}'
-                         .format(request.size))
+                stream2SDS(st, sds_root, verbose=False)
+                log.info('... added stream to archive')
 
             else:
 
-                log.info('... nothing to add')
+                log.info('... no data returned')
 
-        except SkipDay:
+            log.info(f'... request size is {request.size}')
 
-            continue
+    except PermissionError:
 
-        except PermissionError:
+        log.heading('Waveforms2SDS terminated', 1)
+        log.warning("Daily quota reached, you should call it a day.")
 
-            log.heading('Waveforms2SDS terminated', 1)
+        return Response(success=True, time=day, size_bytes=request_size,
+                        quota_exceeded=True)
 
-            log.warning("Daily quota reached, you should call it a day.")
+    except Exception as e:
 
-            return Response(
-                success=True,
-                time=time,
-                size_bytes=req_bytes,
-                quota_exceeded=True,
-            )
+        log.heading('Waveforms2SDS terminated', 1)
+        log.error("An unexpected error occurred.")
+        log.error(e)
 
-        except Exception as e:
+        return Response(success=False, time=day, size_bytes=request_size)
 
-            log.heading('Waveforms2SDS terminated', 1)
-
-            log.error("An unexpected error occurred.")
-
-            log.error(e)
-
-            return Response(
-                success=False,
-                time=time,
-                size_bytes=req_bytes,
-            )
-
-        if request_limit and req_bytes >= request_limit:
-
-            log.heading('Waveforms2SDS terminated', 1)
-
-            log.warning(
-                'Total request size of {} exceeds the limit of {}.'
-                .format(format_size(req_bytes), format_size(request_limit))
-            )
-
-            return Response(
-                success=True,
-                time=time,
-                size_bytes=req_bytes,
-                quota_exceeded=False,
-            )
-
+    # Completed
     log.heading('Waveforms2SDS terminated', 1)
 
-    log.info('Total request size is {format_size(req_bytes)}.')
+    if request_limit and request_size >= request_limit:
+        log.warning(f'Total request size of {format_size(request_size)} '
+                    f'exceeds the limit of {format_size(request_limit)}.')
+        response = Response(success=True, time=day, size_bytes=request_size,
+                            quota_exceeded=False)
 
-    return Response(success=True, size_bytes=req_bytes)
+    else:
+        log.info(f'Total request size is {format_size(request_size)}.')
+        response = Response(success=True, size_bytes=request_size)
+
+    return response
 
 
-class SkipDay(Exception):
+class SkipItem(Exception):
+    pass
+
+
+class RequestItem(Exception):
     pass
 
 
@@ -457,7 +417,7 @@ class Response(object):
 
     def __init__(
         self, success: bool = False, error: str = None,
-        time: UTCDateTime = None, size_bytes: int = None,
+        time: pd.Timestamp = None, size_bytes: int = None,
         quota_exceeded: bool = False
     ):
         """

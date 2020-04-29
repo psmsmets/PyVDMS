@@ -11,7 +11,7 @@ VDMS station messages class.
 # Mandatory imports
 from xml.dom.minidom import parse
 from tempfile import NamedTemporaryFile
-from obspy import read_inventory
+from obspy import read_inventory, Inventory
 
 
 # Relative imports
@@ -63,7 +63,7 @@ class Sta_info(Message):
 
         return "\n".join(out).strip().upper()
 
-    def handler(self, results: list, **kwargs):
+    def handler(self, results: list, **kwargs) -> Inventory:
         """Result handler of the VDMS STA_INFO request message.
 
         Parameters

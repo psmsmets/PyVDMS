@@ -9,12 +9,14 @@ VDMS base messages class.
 
 
 # Mandatory imports
-from obspy import UTCDateTime
-from datetime import datetime
+from pandas.tseries.offsets import DateOffset
 from secrets import token_hex
 from slugify import slugify
 import string
 from warnings import warn
+
+# Relative imports
+from ...util.time import set_time_range
 
 
 __all__ = ['MessageException', 'Message', 'index']
@@ -163,52 +165,45 @@ class Message(object):
                 t1=t1.strftime(self._strftime),
             )
 
-    def set_time(self, start, end=None):
+    def set_time(self, start, end=None, next_day: bool = True):
         """Set the VDMS request message time period.
 
         Parameters
         ----------
 
-        start : `str` or :class:`~obspy.UTCDateTime`
+        start : various
             Set the start time.
 
-        end : `str`, `float`, or :class:`~obspy.UTCDateTime`, optional
-            Set the end time. If `None` (default), the start time is set
-            to midnight and the end time to the next day.
-            If ``end`` is of type `float` it defines the duration of the time
-            period, in seconds (``end = start + end``).
+        end : various, optional
+            Set the end time. If `None` (default), start time is set to the
+            begin of the day (midnight) and end time to the next day if
+            ``next_day`` is `True` and otherwise the last second of the day.
+            If ``end`` is of type `int` or `float` it defines the duration of
+            the time period, in seconds.
+
+        next_day : `bool`, optional
+            If `True` (default), set the end time to the begin of the next day
+            when end time is `None`. If `False`, end time becomes the last
+            second of the day.
+
+        For a full description see :meth:`set_time_range`.
 
         """
         self._update_triggered()
 
-        if isinstance(start, str):
-            start = UTCDateTime(start)
+        start, end = set_time_range(start, end, implicit=True,
+                                    next_day=next_day)
 
-        if not isinstance(start, UTCDateTime):
-            raise TypeError('start should be either a string or an'
-                            'obspy.UTCDateTime object')
+        if self.max_period and (end - start).days > self.max_period:
 
-        if end is not None:
-            if isinstance(end, str):
-                end = UTCDateTime(end)
-            elif isinstance(end, int) or isinstance(end, float):
-                end = start + end
-            if not isinstance(end, UTCDateTime):
-                raise TypeError('end should be either a string or an '
-                                'obspy.UTCDateTime object')
-        if not end or start == end:
-            start = UTCDateTime(datetime.combine(
-                start.datetime, datetime.min.time()
-            ))
-            end = start + 86400 - 1/1000.
-        else:
-            if self._max_period and (end - start) > self.max_period_seconds:
-                end = start + self.max_period_seconds
-                warn(
-                    'Maximum request period of {} days exceeded. '
-                    'New request period is from {}'
-                    .format(self._max_period, self.time)
-                )
+            end = start + DateOffset(self.max_period)
+
+            warn(
+                'Maximum request period of {} days exceeded. '
+                'New request period is from {}'
+                .format(self.max_period, self.time)
+            )
+
         self._t0 = start
         self._t1 = end
 
@@ -285,16 +280,10 @@ class Message(object):
         self._buffer = buffer
 
     @property
-    def max_period_seconds(self):
-        """Get the maximum time period of a VDMS request message, in seconds.
-        """
-        return self._max_period
-
-    @property
-    def max_period_days(self):
+    def max_period(self):
         """Get the maximum time period of a VDMS request message, in days.
         """
-        return int(self._max_period / 86400) if self._max_period else None
+        return self._max_period
 
     def handler(self, results: list, **kwargs):
         """Result handler of the VDMS request message.

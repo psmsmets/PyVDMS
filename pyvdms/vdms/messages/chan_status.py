@@ -55,9 +55,8 @@ class Chan_status(Message):
         """
         super().__init__()
         self._strftime = '%Y/%m/%d'
-        self._max_period = 90 * 86400
-
-        self.set_time(starttime, endtime)
+        self._max_period = 90  # days
+        self.set_time(starttime, endtime, next_day=False)
         self.station = station
         self.channel = channel
         self.id = id
@@ -74,7 +73,7 @@ class Chan_status(Message):
 
         return "\n".join(out).strip().upper()
 
-    def handler(self, results: list, **kwargs):
+    def handler(self, results: list, **kwargs) -> pd.DataFrame:
         """Result handler of the VDMS CHAN_STATUS request message.
 
         Parameters
@@ -135,6 +134,13 @@ class Chan_status(Message):
 
             df = df.append(read(result, date), ignore_index=True, sort=False)
 
+        # samples and gaps to int
+        df = df.astype({'samples': 'int', 'gaps': 'int'})
+
+        # date str to datetime
+        df['date'] = pd.to_datetime(df['date'])
+
+        # sort rows
         df = df.sort_values(
             by=['date', 'station', 'channel'], ascending=[True, True, True]
         ).reset_index(drop=True)

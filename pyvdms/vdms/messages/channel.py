@@ -61,7 +61,7 @@ class Channel(Message):
 
         return "\n".join(out).strip().upper()
 
-    def handler(self, results: list, **kwargs):
+    def handler(self, results: list, **kwargs) -> pd.DataFrame:
         """Result handler of the VDMS CHANNEL request message.
 
         Parameters
@@ -98,4 +98,11 @@ class Channel(Message):
             **kwargs
         )
 
-        return df.dropna(axis='columns', how='all')
+        # date str to datetime
+        df['on_date'] = pd.to_datetime(df['on_date'])
+        df['off_date'] = pd.to_datetime(df['off_date'])
+
+        # fill empty network
+        df.loc[df['network'].isnull(), 'network'] = 'IM'
+
+        return df

@@ -100,7 +100,7 @@ class Request(object):
     def clc(self):
         """Get the command line client.
         """
-        return self.command_line_client
+        return self._clc
 
     @property
     def message(self):

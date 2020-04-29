@@ -73,7 +73,7 @@ class Waveform(Message):
 
         return "\n".join(out).strip().upper()
 
-    def handler(self, results: list, **kwargs):
+    def handler(self, results: list, **kwargs) -> Stream:
         """Result handler of the VDMS WAVEFORM request message.
 
         Parameters
