@@ -12,6 +12,7 @@ Common time methods.
 import datetime
 from pandas import to_datetime as pandas_to_datetime
 from pandas.tseries.offsets import DateOffset
+from dateparser import parse
 
 
 __all__ = ['to_datetime', 'set_time_range']
@@ -40,20 +41,7 @@ def to_datetime(time):
         time = time.datetime
 
     elif isinstance(time, str):
-
-        time = time.lower()
-
-        if time == 'today':
-
-            time = datetime.date.today()
-
-        elif time == 'yesterday':
-
-            time = datetime.date.today() - datetime.timedelta(days=1)
-
-        elif time == 'tomorrow':
-
-            time = datetime.date.today() + datetime.timedelta(days=1)
+        time = parse(time)
 
     return pandas_to_datetime(time)
 

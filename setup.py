@@ -45,7 +45,7 @@ setup(
     ],
     install_requires=[
         'numpy>=1.16',
-        'obspy>=1.1.0',
+        'obspy>=1.2.0',
         'pandas>=0.25.0',
         'humanfriendly>=4.18',
         'tabulate>=0.8.5',
