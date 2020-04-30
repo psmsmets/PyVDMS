@@ -15,7 +15,7 @@ NAME = 'pyvdms'
 
 setup(
     name=NAME,
-    python_requires='>3.5.0',
+    python_requires='>=3.6.0',
     description=DESCRIPTION,
     long_description=README,
     author='Pieter Smets',
@@ -51,6 +51,7 @@ setup(
         'tabulate>=0.8.5',
         'python-crontab>=2.3.9',
         'dateparser>=0.7.2',
+        'python-slugify>=4.0.0'
     ],
     use_scm_version={
         'root': '.',
