@@ -15,7 +15,7 @@ Main pyvdms features listed per submodule:
 - **vdms**: core functionality of the VDMS.
 
   - ``messages``: VDMS messages derived from the base class ``Message``.
-    Implemented messages and there return types are:
+    Implemented messages and their return types:
 
     - Arrival : Pandas.DataFrame
     - Bulletin : Obspy.Event
