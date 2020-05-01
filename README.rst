@@ -61,10 +61,11 @@ Install pyvdms via ``pip``:
    pip install -e .
 
 
-Required are Python version 3.5 or higher and the modules `NumPy`, `SciPy`,
-`ObsPy`, and `Pandas`.
-Old versions of `ObsPy` (<1.2.0) and `NumPy` tend to cause problems which
-kills the `remove_response` function of `ObsPy`.
+Required are Python version 3.6 or higher and the modules NumPy, SciPy,
+ObsPy, and Pandas.
+Old versions of ObsPy (<1.2.0) cnan conflict with NumPy and tend to cause
+problems which kills the remove_response function of ObsPy.
+
 Create a working (non-conflicting) Python 3.7 environment in conda as follows:
 
 .. code-block:: console
