@@ -19,20 +19,6 @@ from ..jobber import Job, Queue
 
 __all__ = []
 
-
-tabulate_keys = {
-    'id': 'id',
-    'starttime': 'start',
-    'endtime': 'end',
-    'time': 'time',
-    'station': 'stat',
-    'channel': 'chan',
-    'priority': '^',
-    'status': 'status',
-    'max_request_size': 'lim',
-    'user': 'user',
-}
-
 conf_keys = {
     'starttime': str,
     'endtime': str,
@@ -40,8 +26,7 @@ conf_keys = {
     'channel': str,
     'sds_root': str,
     'priority': int,
-    'max_request_size': str,
-    'email': list,
+    'request_limit': str,
     'client': str,
     'client_kwargs': dict,
 }
@@ -57,6 +42,8 @@ params = dict(user=None, job=None, status=None, homedir=None,
 
 
 def usage():
+    """Show usage.
+    """
     print("client_scheduler <action> "
           "[-d<dir> -j<job> -s<status> -u<user> -h] [args]")
     print("Actions : {}".format(', '.join(actions.keys())))
@@ -69,10 +56,14 @@ def usage():
 
 
 def version():
+    """Show version.
+    """
     print(__version__)
 
 
 def parse_conf():
+    """Parse config file.
+    """
     if not os.path.isfile(conf):
         return dict()
     try:
@@ -87,18 +78,21 @@ def parse_conf():
             print(f'Invalid conf key "{key}". Ignored.')
             del d[key]
         elif d[key] is not None and not isinstance(d[key], conf_keys[key]):
-            print('Illegal conf value for key "{}":"{}". Ignored.'
-                  .format(key, d[key]))
+            print(f'Illegal conf value for key "{key}":"{d[key]}". Ignored.')
             del d[key]
     return d
 
 
 def defaults():
+    """Get defaults
+    """
     d = parse_conf()
     print(tabulate(list(zip(d.keys(), d.values()))))
 
 
 def clean():
+    """Clean completed jobs from the queue.
+    """
     for job in queue.items(status=params['status'] or ['completed'],
                            user=params['user']):
         if job.completed:
@@ -108,6 +102,8 @@ def clean():
 
 
 def reset():
+    """Reset failed jobs in the queue.
+    """
     for job in queue.items(status=params['status'] or ['error'],
                            user=params['user']):
         if job.error:
@@ -117,19 +113,14 @@ def reset():
 
 
 def index():
-    table = []
-    d = queue.jobs_to_dict(keys=list(tabulate_keys.keys()),
-                           status=params['status'], user=params['user'])
-    for job in d:
-        table.append(list(job[key] for key in tabulate_keys))
-    print(
-        tabulate(
-            table, headers=list(value for key, value in tabulate_keys.items())
-        ) or 'No jobs found.'
-    )
+    """List jobs in the queue.
+    """
+    print(queue.index(status=params['status'], user=params['user']))
 
 
 def add():
+    """Add a job to the queue.
+    """
     d = parse_conf()
     for arg in params['args']:
         key, value = re.split(r"[:=]", arg.rstrip(','))
@@ -143,11 +134,14 @@ def add():
     if job.ready:
         queue.add(job)
         queue.write_lock()
-        print_job(job)
+        print('New job:', job.details(True))
+        print('Entire queue:'
         index()
 
 
 def cancel():
+    """Cancel a job from the queue.
+    """
     job = queue.find(params['job'])
     if not job:
         print('You should specify a valid job id.')
@@ -156,12 +150,14 @@ def cancel():
         print('You cannot remove an active job.')
         return
     queue.remove(job)
-    print('Removed job with id={} from queue.'.format(job.id))
+    print(f'Removed job with id={job.id} from queue.')
     queue.write_lock()
     index()
 
 
 def cron_start(instant: bool = True):
+    """Start the crontab.
+    """
     if queue.crontab:
         print('Crontab already exists.')
         return
@@ -177,8 +173,7 @@ def cron_start(instant: bool = True):
     crontab = CronTab(user=True)
     cronjob = crontab.new(
         command=cmd,
-        comment=('Auto created by client_scheduler on {}'
-                 .format(now.isoformat()))
+        comment=f'Auto created by client_scheduler on {now.isoformat()}',
     )
     if system == 'Darwin' or system == 'Linux':
         cronjob.every(1).days()
@@ -199,6 +194,8 @@ def cron_start(instant: bool = True):
 
 
 def cron_stop():
+    """Stop the crontab.
+    """
     if queue.crontab:
         crontab = CronTab(user=True)
         for cronjob in crontab.find_command('client_scheduler'):
@@ -212,12 +209,16 @@ def cron_stop():
 
 
 def cron_restart(instant: bool = True):
+    """Restart the crontab.
+    """
     if queue.crontab:
         cron_stop()
     cron_start(instant)
 
 
 def cron_info():
+    """List the crontab info.
+    """
     if queue.crontab:
         print(queue.crontab)
     else:
@@ -225,6 +226,9 @@ def cron_info():
 
 
 def cron_run():
+    """Queue run triggered by crontab. Runs the queue process and update
+    the crontab time.
+    """
     print("Client_scheduler run triggered by crontab on",
           datetime.now().isoformat())
     run()
@@ -233,10 +237,11 @@ def cron_run():
 
 
 def run():
+    """Process the jobs in the queue.
+    """
     active = queue.processing()
     if len(active) > 0:
-        print('Job {} is already active. Please be patient.'
-              .format(active[0].id))
+        print(f'Job {active[0].id} is already active. Please be patient.')
         return
     if params['job']:
         job = queue.find(params['job'])
@@ -253,14 +258,18 @@ def run():
 
 
 def info():
+    """Shows the job info.
+    """
     job = queue.find(params['job'])
     if not job:
         print('You should specify a valid job id.')
         return
-    print_job(job)
+    print(job.details(history=True))
 
 
 def update():
+    """Update job parameters.
+    """
     job = queue.find(params['job'])
     if not job:
         print('You should specify a valid job id.')
@@ -270,25 +279,29 @@ def update():
         key, value = re.split(r"[:=]", arg.rstrip(','))
         d[key] = value
     job.update(**d)
-    print_job(job, history=False)
+    print(job.details(history=False))
     queue.write_lock()
 
 
 def logs():
+    """Show the logs.
+    """
     if os.path.isfile(log):
         with open(log, 'r') as f:
             print(f.read())
     else:
-        print('Log file {} not found.'.format(log))
+        print(f'Log file {log} not found.')
 
 
 def run_job(job: Job, verbose=True):
+    """Run a job.
+    """
     run_next = True
     print("Process job:")
     job._set_status('JOB_PROCESSING')
     queue.write_lock()
     if verbose:
-        print_job(job)
+        print(job.details(history=True))
     try:
         run_next = job.process(update_status=False)
     except Exception as e:
@@ -299,29 +312,33 @@ def run_job(job: Job, verbose=True):
     return run_next
 
 
-def print_job(job: Job, history: bool = True):
-    job_info = job.to_dict()
-    job_info.pop('status', None)
-    for key, value in job_info.items():
-        print("{:>25} : {}".format(key, value))
-    if history:
-        print(tabulate(job.history))
-
-
 def init():
+    """Set the globals.
+    """
     global system, home, log, lock, conf, queue
     system = platform.system()
+
     if params['homedir']:
+
         home = params['homedir']
+
+    elif os.environ.get('PYVDMS_HOME'):
+
+        home = os.environ.get('PYVDMS_HOME')
+
     else:
-        home = 'CLIENT_SCHEDULER_HOME'
-        if not os.environ.get(home):
-            print("Cannot find the environment variable \"{}\".".format(home))
-            sys.exit(2)
-        home = os.environ.get(home)
+
+        home = '~/.pyvdms'
+
     if not os.path.isdir(home):
-        print("Cannot find the directory \"{}\".".format(home))
-        sys.exit(2)
+
+        print(f'Cannot find the directory "{home}". '
+              'Either at the default location "~/.pyvdms" or specified by '
+              'environment variable PYVDMS_HOME="~/.pyvdms".')
+
+        raise SystemExit()
+
+    home = os.path.abspath(home)
     log = os.path.join(home, "log.txt")
     lock = os.path.join(home, "queue.lock")
     conf = os.path.join(home, "defaults.json")
@@ -350,6 +367,8 @@ actions = {
 
 
 def main():
+    """
+    """
     global params
     if len(sys.argv) < 2:
         print('You should provide a valid action.')
@@ -398,7 +417,7 @@ def main():
         actions[action]()
     except IOError as e:
         print(str(e))
-        print("Is the lock file {0} corrupt?".format(lock))
+        print(f'Is the lock file {lock} corrupt?')
         sys.exit(2)
     except Exception as e:
         print(str(e))

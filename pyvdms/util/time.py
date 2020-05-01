@@ -9,7 +9,6 @@ Common time methods.
 
 
 # Mandatory imports
-import datetime
 from pandas import to_datetime as pandas_to_datetime
 from pandas.tseries.offsets import DateOffset
 from dateparser import parse

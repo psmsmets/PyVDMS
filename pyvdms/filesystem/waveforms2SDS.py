@@ -18,7 +18,7 @@ __all__ = ['waveforms2SDS']
 
 def waveforms2SDS(
     station: str, channel: str, starttime, endtime, sds_root: str,
-    sds_threshold: float = 300., sds_qc: bool = True, request_limit=None,
+    threshold: float = 300., sds_qc: bool = True, request_limit=None,
     verbose: bool = True, debug: bool = False, log_file: str = None
 ):
     """Add waveforms to your local SDS archive.
@@ -43,15 +43,15 @@ def waveforms2SDS(
     sds_root : `str`
         Path to the local SDS archive.
 
-    sds_threshold : `float`, optional
-        Force a request if the data gap in the SDS archive per day exceeds the
-        threshold ``sds_threshold``, in seconds. The threshold should be within
-        [0, 86400] seconds. If `None`, or -1, no request is forced.
-        Defaults to 300 seconds.
-
     sds_qc : `bool`, optional
-        Perform a simple quality control of the local SDS archive and correct
-        on-the-fly.
+        Perform a simple quality control of the local SDS archive sample rate
+        and correct on-the-fly.
+
+    threshold : `float`, optional
+        Force a request if the data gap per day exceeds the threshold, in
+        seconds. The threshold should be within [0, 86400] seconds. If `None`,
+        or -1, no request is forced. If 0, any sample difference triggers a
+        request. Defaults to 300 seconds.
 
     request_limit : `int`  or `str`, optional
         Limit the total request size, in bytes if `int`. A human readable limit
@@ -90,14 +90,15 @@ def waveforms2SDS(
         freq='1D',
     )
 
-    # sds threshold
-    sds_threshold = sds_threshold or 0.
+    # threshold
+    threshold = threshold or 300.
+    threshold = 86400. if threshold == -1. else threshold
 
-    if not isinstance(sds_threshold, float):
-        raise TypeError('sds_threshold should be of type float.')
+    if not isinstance(threshold, float):
+        raise TypeError('threshold should be of type float.')
 
-    if sds_threshold < 0 or sds_threshold > 86400:
-        raise ValueError('sds_threshold threshold should be within 0 to 86400')
+    if threshold < 0. or threshold > 86400.:
+        raise ValueError('threshold threshold should be within 0 to 86400')
 
     # set request limit from bytes or a formatted string
     request_limit = request_limit or 0
@@ -108,6 +109,8 @@ def waveforms2SDS(
         request_limit = parse_size(request_limit)
     else:
         raise TypeError('Request limit should be of type int or str.')
+
+    limit = format_size(request_limit) if request_limit else 'None'
 
     # init main variables
     log = Logger(verbose, debug, log_file)
@@ -124,10 +127,8 @@ def waveforms2SDS(
     log.info(f'          days = {len(days)}')
     log.info(f'      sds_root = {sds_root}')
     log.info(f'        sds_qc = {sds_qc}')
-    log.info(f' sds_threshold = {sds_threshold}s')
-    log.info('  request limit = {}'.format(
-        format_size(request_limit) if request_limit else 'None'
-    ))
+    log.info(f'     threshold = {threshold}s')
+    log.info(f' request limit = {limit}')
 
     #
     # get stations and channels
@@ -261,7 +262,7 @@ def waveforms2SDS(
                     sds_sec = sds_avail * 86400.
 
                     log.info(
-                        f'... {item.station}.{item.channel}: sds '
+                        f'{item.station}.{item.channel} @ sds  '
                         f'{sds_avail*100:6.2f}% ({86400-sds_sec:.2f}s)'
                     )
 
@@ -278,7 +279,7 @@ def waveforms2SDS(
                     # get availability
                     if not day_status_requested:
 
-                        log.info('... request status for day.')
+                        log.info('Request status for day.')
 
                         day_status_requested = True
 
@@ -295,8 +296,8 @@ def waveforms2SDS(
                         if not isinstance(day_status, pd.DataFrame):
 
                             log.warning('Status request returned None.')
-                            log.info('... all waveforms for this day shall be '
-                                     'requested if threshold exceeded.')
+                            log.info('All waveforms for this day shall be '
+                                     'requested if threshold is exceeded.')
 
                     if isinstance(day_status, pd.DataFrame):
 
@@ -310,15 +311,15 @@ def waveforms2SDS(
                         vdms_avail = vdms_sec / 86400
 
                         log.debug(
-                            f'... {item.station}.{item.channel}: vdms '
+                            f'{item.station}.{item.channel} @ vdms '
                             f'{vdms_avail*100:6.2f}% ({86400-vdms_sec:.2f}s)'
                         )
 
-                        if vdms_sec - sds_sec > sds_threshold:
+                        if vdms_sec - sds_sec >= threshold:
 
                             raise RequestItem
 
-                    elif 86400 - sds_sec > sds_threshold:
+                    elif 86400 - sds_sec >= threshold:
 
                         raise RequestItem
 
@@ -334,12 +335,13 @@ def waveforms2SDS(
             # Request missing items for day?
             if len(missing_items) == 0:
 
+                log.info('Nothing to add for this day.')
                 continue
 
             stats = ','.join(set([item.station for item in missing_items]))
             chans = ','.join(set([item.channel for item in missing_items]))
 
-            log.info('... request missing data:')
+            log.info('Request missing data:')
             log.info(f'       station = {stats}')
             log.info(f'       channel = {chans}')
 
@@ -359,13 +361,13 @@ def waveforms2SDS(
             if isinstance(st, Stream):
 
                 stream2SDS(st, sds_root, verbose=False)
-                log.info('... added stream to archive')
+                log.info('Added stream to archive')
 
             else:
 
-                log.info('... no data returned')
+                log.info('No data returned')
 
-            log.info(f'... request size is {request.size}')
+            log.info(f'Request size is {request.size}')
 
     except PermissionError:
 

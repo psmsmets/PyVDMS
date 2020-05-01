@@ -16,7 +16,7 @@ from obspy import read_inventory, Inventory
 
 # Relative imports
 from .message import Message
-from ...util.xml import removeElementByTagName
+from ...util.xml import removeElementByTagName, removeElementAttribute
 
 
 __all__ = ['Sta_info']
@@ -94,8 +94,17 @@ class Sta_info(Message):
                  values=['azb', 'cb', 'fsb', 'vlb']),
         ]
 
+        badAttrs = [
+            dict(tag='sensor', attr='response', regex=r'^ResponseFAP#'),
+        ]
+
         for badTag in badTags:
             removeElementByTagName(xmldoc, **badTag)
+
+        for badAttr in badAttrs:
+            removeElementAttribute(xmldoc, **badAttr)
+
+        # print(xmldoc.toprettyxml())
 
         with NamedTemporaryFile() as f:
             f.write(xmldoc.toprettyxml().encode())
