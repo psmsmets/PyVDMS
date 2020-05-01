@@ -61,10 +61,10 @@ Install pyvdms via ``pip``:
    pip install -e .
 
 
-Required are Python version 3.5 or higher and the modules `NumPy`_, `SciPy`_,
-`ObsPy`_, and `Pandas`_.
-Old versions of `ObsPy`_ (<1.2.0) and `NumPy`_ tend to cause problems which
-kills the `remove_response`_ function of `ObsPy`_.
+Required are Python version 3.5 or higher and the modules `NumPy`, `SciPy`,
+`ObsPy`, and `Pandas`.
+Old versions of `ObsPy` (<1.2.0) and `NumPy` tend to cause problems which
+kills the `remove_response` function of `ObsPy`.
 Create a working (non-conflicting) Python 3.7 environment in conda as follows:
 
 .. code-block:: console
@@ -75,13 +75,15 @@ Create a working (non-conflicting) Python 3.7 environment in conda as follows:
 Path
 ----
 
-Define the `CLIENT_SCHEDULER_HOME` variable in your default bash environment if
-you would like to make use of the `pyvmds-scheduler` tool to crontab requests
-using a prioritized queue.
+``pyvmds-scheduler`` to crontab requests using a prioritized queue
+stores by default the queue, default settings and logs in ``~/.pyvdms``.
+
+Define the `PYVDMS_HOME` variable in your default bash environment if you would
+like to redefine the ``pyvdms-scheduler`` home directory.
 
 .. code-block:: console
 
-    export CLIENT_SCHEDULER_HOME='path to scheduler home'
+    export PYVDMS_HOME='path\to\pyvdms\scheduler\home'
 
 
 NMS Client
