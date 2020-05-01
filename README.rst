@@ -16,6 +16,7 @@ Main pyvdms features listed per submodule:
 
   - ``messages``: VDMS messages derived from the base class ``Message``.
     Implemented messages and there return types are:
+
     - Arrival : Pandas.DataFrame
     - Bulletin : Obspy.Event
     - Chan_status : Pandas.DataFrame
@@ -23,7 +24,9 @@ Main pyvdms features listed per submodule:
     - Response : Pandas.DataFrame
     - Sta_info : Obspy.Inventory
     - Waveform : Obspy.Stream
+
   - ``request``: VDMS request service wrapping the command line client.
+
   - ``client``: VDMS messages and request as a client service.
 
 - **filesystem**: high-end functionality to add missing/incomplete waveform
@@ -38,11 +41,16 @@ Main pyvdms features listed per submodule:
 
   - ``headings``: construct various string headings following the Python’s
     Style Guide for documenting.
+
   - ``logger``: an extended and pre-configured logging object.
+
   - ``strlist``: function to check the presence of a substring in a list of
     strings and to extract a specific line (or part of a line).
+
   - ``verify``: generalized tuple range input validator.
+
   - ``time``: extensions of ``pandas.to_datetime`` and a common method to set time ranges.
+
   - ``xml``: remove an xml element by a tag name and optionally by an attribute
     and its values.
 
