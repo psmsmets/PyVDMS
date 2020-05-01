@@ -7,6 +7,10 @@ VDMS arrival messages class.
 
 """
 
+# Mandatory imports
+import pandas as pd
+import numpy as np
+
 
 # Relative imports
 from .message import Message
@@ -100,3 +104,59 @@ class Arrival(Message):
         """Get the VDMS request message name
         """
         return f'{self.__class__.__name__}:{self._arrival}'
+
+    def handler(self, results: list, **kwargs) -> pd.DataFrame:
+        """Result handler of the VDMS ARRIVAL request message.
+
+        Parameters
+        ----------
+
+        results : `list`
+            List with paths to temporary files or objects. Only the first
+            item is used.
+
+        **kwargs
+            Additional parameters for :meth:`pandas.read_fwf`.
+
+        Returns
+        -------
+
+        result : :class:`pandas.DataFrame`
+            Dataframe with the requested arrivals.
+
+        """
+
+        columns = {
+            'network': (0, 9),
+            'station': (10, 15),
+            'beamId': (16, 28),
+            'date_time': (29, 52),
+            'phase': (53, 54),
+            'azimuth': (59, 67),
+            'slowness': (68, 73),
+            'velocity': (68, 73),  # same as slowness (convert later)
+            'SNR': (74, 79),
+            'amplitude': (80, 89),
+            'period': (90, 95),
+            'STA': (96, 101),
+            'duration': (102, 107),
+            'author': (108, 114),
+            'detectionId': (115, 127),
+       }
+
+        df = pd.read_fwf(
+            results[0],
+            header=0,
+            colspecs=list(columns.values()),
+            names=list(columns.keys()),
+            skiprows=12,
+            skipfooter=1,
+            date_parser=pd.to_datetime,
+            parse_dates=[2],
+            **kwargs
+        )
+
+        # calculate velocity from slowness
+        df.velocity = df.slowness * 6367470 * np.pi / 180
+
+        return df

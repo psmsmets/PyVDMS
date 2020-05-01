@@ -97,16 +97,26 @@ class Chan_status(Message):
 
         df = pd.DataFrame()
 
+        columns = {
+            'network': (0, 9),
+            'station': (10, 15),
+            'channel': (16, 19),
+            '%_Recvd': (20, 28),
+            '%_AvaUA': (29, 36),
+            '%_Avail': (37, 44),
+            'gaps': (45, 50),
+            'samples': (51, 60),
+            'constant': (61, 70),
+            'mean': (71, 82),
+            'RMS': (83, 95),
+       }
+
         def read(result, date):
             df = pd.read_fwf(
                 results[0],
                 header=0,
-                colspecs=[(0, 9), (10, 15), (16, 19), (21, 28),
-                          (29, 36), (37, 44), (45, 50), (51, 60),
-                          (61, 70), (71, 82), (83, 95)],
-                names=['network', 'station', 'channel', '%_Recvd',
-                       '%_AvaUA', '%_Avail', 'gaps', 'samples',
-                       'constant', 'mean', 'RMS'],
+                colspecs=list(columns.values()),
+                names=list(columns.keys()),
                 skiprows=8,
                 skipfooter=1,
                 **kwargs

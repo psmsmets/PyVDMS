@@ -82,25 +82,35 @@ class Channel(Message):
 
         """
 
+        columns = {
+            'network': (0, 9),
+            'station': (10, 15),
+            'channel': (16, 19),
+            'auxillary': (20, 25),
+            'latitude': (26, 34),
+            'longitude': (35, 45),
+            'coordinate_system': (46, 58),
+            'elevation': (59, 64),
+            'depth': (65, 70),
+            'hang': (71, 78),
+            'Vang': (79, 83),
+            'sampling_rate': (84, 95),
+            'instrument': (96, 102),
+            'on_date': (103, 113),
+            'off_date': (114, 125),
+       }
+
         df = pd.read_fwf(
             results[0],
             header=0,
-            colspecs=[(0, 9), (10, 15), (16, 19), (20, 25), (26, 34), (35, 45),
-                      (46, 58), (59, 64), (65, 70), (71, 78), (79, 83),
-                      (84, 95), (96, 102), (103, 113), (115, 125)],
-            names=['network', 'station', 'channel', 'auxillary', 'latitude',
-                   'longitude', 'coordinate_system', 'elevation', 'depth',
-                   'hang', 'Vang', 'sampling_rate', 'instrument', 'on_date',
-                   'off_date'],
+            colspecs=list(columns.values()),
+            names=list(columns.keys()),
             skiprows=6,
             skipfooter=1,
+            date_parser=pd.to_datetime,
             parse_dates=[13, 14],
             **kwargs
         )
-
-        # date str to datetime
-        df['on_date'] = pd.to_datetime(df['on_date'])
-        df['off_date'] = pd.to_datetime(df['off_date'])
 
         # fill empty network
         df.loc[df['network'].isnull(), 'network'] = 'IM'

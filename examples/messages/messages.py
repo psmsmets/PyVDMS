@@ -30,7 +30,7 @@ print(messages.Waveform.__init__.__doc__)
 msg = messages.Waveform(starttime='2020-02-02', station='I18*', channel='*')
 
 # View the formatted message
-msg.message
+print(msg.message)
 
 # Or simply
 print(msg)
@@ -42,7 +42,7 @@ msg.channel = '*F'
 
 # Setting the time period requires the dedicated method
 msg.set_time(start='2020-02-02', end=3600.)
-msg.time
+print(msg.time)
 
 # View the final message
-msg
+print(msg)

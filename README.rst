@@ -15,8 +15,14 @@ Main pyvdms features listed per submodule:
 - **vdms**: core functionality of the VDMS.
 
   - ``messages``: VDMS messages derived from the base class ``Message``.
-    Implemented messages are [``Arrival``, ``Bulletin``, ``Chan_status``,
-    ``Channel``, ``Response``, ``Sta_info``, ``Waveform``].
+    Implemented messages and there return types are:
+    - Arrival : Pandas.DataFrame
+    - Bulletin : Obspy.Event
+    - Chan_status : Pandas.DataFrame
+    - Channel : Pandas.DataFrame
+    - Response : Pandas.DataFrame
+    - Sta_info : Obspy.Inventory
+    - Waveform : Obspy.Stream
   - ``request``: VDMS request service wrapping the command line client.
   - ``client``: VDMS messages and request as a client service.
 
