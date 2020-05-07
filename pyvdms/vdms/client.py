@@ -2,11 +2,9 @@
 """
 """
 
-
 # Mandatory imports
 from obspy import Stream, Inventory, UTCDateTime
 from pandas import DataFrame
-
 
 # Relative imports
 from ..util.time import to_datetime, set_time_range
@@ -53,12 +51,11 @@ class Client(object):
         out += ['VDMS Webservice Client '
                 f'(command line client: {self._request.clc})']
         out += ["Available Services: "
-                "'Channel', 'Chan_status', 'Sta_info', 'Waveform'"] 
+                "'Channel', 'Chan_status', 'Sta_info', 'Waveform'"]
         out += ['']
         out += ['Note: only principal users can request IMS data and IDC '
-               'products for the verification of the '
-               'Comprehensive Nuclear-Test-Ban Treaty (CTBT).']
-
+                'products for the verification of the '
+                'Comprehensive Nuclear-Test-Ban Treaty (CTBT).']
 
         return '\n'.join(out)
 
@@ -142,7 +139,7 @@ class Client(object):
                 )
             ]
 
-        ch = ch[(ch.channel==channel)]
+        ch = ch[(ch.channel == channel)]
 
         return ch.reset_index(drop=True)
 

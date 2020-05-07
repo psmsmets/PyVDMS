@@ -98,7 +98,7 @@ class Channel(Message):
             'instrument': (96, 102),
             'on_date': (103, 113),
             'off_date': (114, 125),
-       }
+        }
 
         df = pd.read_fwf(
             results[0],

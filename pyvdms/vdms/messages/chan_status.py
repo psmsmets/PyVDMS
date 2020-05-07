@@ -109,7 +109,7 @@ class Chan_status(Message):
             'constant': (61, 70),
             'mean': (71, 82),
             'RMS': (83, 95),
-       }
+        }
 
         def read(result, date):
             df = pd.read_fwf(

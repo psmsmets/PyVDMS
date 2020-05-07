@@ -142,7 +142,7 @@ class Arrival(Message):
             'duration': (102, 107),
             'author': (108, 114),
             'detectionId': (115, 127),
-       }
+        }
 
         df = pd.read_fwf(
             results[0],

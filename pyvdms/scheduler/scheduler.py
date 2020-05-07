@@ -1,5 +1,6 @@
-#!/usr/bin/env python
-# coding: utf-8
+# -*- coding: utf-8 -*-
+"""
+"""
 
 # Mandatory imports
 import json
@@ -135,7 +136,7 @@ def add():
         queue.add(job)
         queue.write_lock()
         print('New job:', job.details(True))
-        print('Entire queue:'
+        print('Entire queue:')
         index()
 
 
