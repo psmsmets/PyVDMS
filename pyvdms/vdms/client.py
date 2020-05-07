@@ -28,15 +28,42 @@ class Client(object):
         """
         Initializes a VDMS client.
 
+        Parameters
+        ----------
+        command_line_client : `str`
+            Set the VDMS request command line client, either the command name
+            or the full path. Defaults to 'nms_client'.
+
+        Any additional keyword arguments will be passed to the request client.
+
+        Example
+        -------
+        >>> from pyvdms import Client
         >>> client = Client()
 
-        :type command_line_client: str
-        :param command_line_client: Base name or full path to the command
-        line client.
         """
         self._request = Request(
             message=None, command_line_client=command_line_client, **kwargs
         )
+
+    def __str__(self):
+        """Get the formatted VDMS client overview.
+        """
+        out = []
+        out += ['VDMS Webservice Client '
+                f'(command line client: {self._request.clc})']
+        out += ["Available Services: "
+                "'Channel', 'Chan_status', 'Sta_info', 'Waveform'"] 
+        out += ['']
+        out += ['Note: only principal users can request IMS data and IDC '
+               'products for the verification of the '
+               'Comprehensive Nuclear-Test-Ban Treaty (CTBT).']
+
+
+        return '\n'.join(out)
+
+    def _repr_pretty_(self, p, cycle):
+        p.text(self.__str__())
 
     @property
     def last_request(self):
@@ -51,22 +78,8 @@ class Client(object):
         """
         Query the stations dataselect service of the client.
 
-        >>> client = Client()
-        >>> ch = client.get_channels("I18*", "BDF", "2020-02-02")
-        >>> print(ch)
-          network station channel  ...  instrument    on_date  off_date
-        0      IM   I18H1     BDF  ...      MB2000 2016-12-06       NaT
-        1      IM   I18H2     BDF  ...      MB2000 2016-12-06       NaT
-        2      IM   I18H3     BDF  ...      MB2000 2016-12-06       NaT
-        3      IM   I18H4     BDF  ...      MB2000 2016-12-06       NaT
-        4      IM   I18L1     BDF  ...      MB2000 2016-12-06       NaT
-        5      IM   I18L2     BDF  ...      MB2000 2016-12-06       NaT
-        6      IM   I18L3     BDF  ...      MB2000 2016-12-06       NaT
-        7      IM   I18L4     BDF  ...      MB2000 2016-12-06       NaT
-
-        Parameters:
-        -----------
-
+        Parameters
+        ----------
         station : `str`
             Select one or more SEED station codes. Multiple codes are
             comma-separated (e.g. "ANMO,PFO"). Wildcards are allowed.
@@ -82,6 +95,23 @@ class Client(object):
             Set the end time.
 
         Any additional keyword arguments will be passed to the request service.
+
+        Example
+        -------
+        >>> from pyvdms import Client
+        >>> client = Client()
+        >>> ch = client.get_channels("I18*", "BDF", "2020-02-02")
+        >>> print(ch)
+          network station channel  ...  instrument    on_date  off_date
+        0      IM   I18H1     BDF  ...      MB2000 2016-12-06       NaT
+        1      IM   I18H2     BDF  ...      MB2000 2016-12-06       NaT
+        2      IM   I18H3     BDF  ...      MB2000 2016-12-06       NaT
+        3      IM   I18H4     BDF  ...      MB2000 2016-12-06       NaT
+        4      IM   I18L1     BDF  ...      MB2000 2016-12-06       NaT
+        5      IM   I18L2     BDF  ...      MB2000 2016-12-06       NaT
+        6      IM   I18L3     BDF  ...      MB2000 2016-12-06       NaT
+        7      IM   I18L4     BDF  ...      MB2000 2016-12-06       NaT
+
         """
         self._request.message = Channel(
             station=station, channel=channel
@@ -112,6 +142,8 @@ class Client(object):
                 )
             ]
 
+        ch = ch[(ch.channel==channel)]
+
         return ch.reset_index(drop=True)
 
     def get_stations(
@@ -121,8 +153,29 @@ class Client(object):
         """
         Query the stations dataselect service of the client.
 
+        Parameters
+        ----------
+        station : `str`
+            Select one or more SEED station codes. Multiple codes are
+            comma-separated (e.g. "ANMO,PFO"). Wildcards are allowed.
+
+        channel : `str`
+            Select one or more SEED channel codes. Multiple codes are
+            comma-separated (e.g. "BHZ,HHZ,*N"). Wildcards are allowed.
+
+        starttime : various
+            Set the start time.
+
+        endtime : various, optional
+            Set the end time.
+
+        Any additional keyword arguments will be passed to the request service.
+
+        Example
+        -------
+        >>> from pyvdms import Client
         >>> client = Client()
-        >>> inv = client.get_waveforms("I18*", "BDF", "2020-02-02")
+        >>> inv = client.get_stations("I18*", "BDF", "2020-02-02")
         >>> print(inv)
         Sending institution: sc3ml import (ObsPy Inventory)
         Contains:
@@ -141,24 +194,6 @@ class Client(object):
             Channels (8):
                 IM.I18H1..BDF, IM.I18H2..BDF, IM.I18H3..BDF, IM.I18H4..BDF,
 
-        Parameters:
-        -----------
-
-        station : `str`
-            Select one or more SEED station codes. Multiple codes are
-            comma-separated (e.g. "ANMO,PFO"). Wildcards are allowed.
-
-        channel : `str`
-            Select one or more SEED channel codes. Multiple codes are
-            comma-separated (e.g. "BHZ,HHZ,*N"). Wildcards are allowed.
-
-        starttime : various
-            Set the start time.
-
-        endtime : various, optional
-            Set the end time.
-
-        Any additional keyword arguments will be passed to the request service.
         """
 
         self._request.message = Sta_info(
@@ -193,6 +228,30 @@ class Client(object):
         """
         Query the waveforms dataselect service of the client.
 
+        Parameters
+        ----------
+        station : `str`
+            Select one or more SEED station codes. Multiple codes are
+            comma-separated (e.g. "ANMO,PFO"). Wildcards are allowed.
+
+        channel : `str`
+            Select one or more SEED channel codes. Multiple codes are
+            comma-separated (e.g. "BHZ,HHZ,*N"). Wildcards are allowed.
+
+        starttime : various
+            Set the start time.
+
+        endtime : various, optional
+            Set the end time. If `None` (default), the start time is set
+            to midnight and the end time to the next day.
+            If ``endtime`` is of type `int` or `float` it defines the duration
+            of the time period, in seconds.
+
+        Any additional keyword arguments will be passed to the request service.
+
+        Example
+        -------
+        >>> from pyvdms import Client
         >>> client = Client()
         >>> t1 = UTCDateTime("2010-02-27T06:30:00.000")
         >>> t2 = t1 + 60
@@ -219,9 +278,22 @@ class Client(object):
         IM.I18L3..BDF | 2010-02-27T06:30:00.0695Z - ... | 20.0 Hz, 1200 samples
         IM.I18L4..BDF | 2010-02-27T06:30:00.0695Z - ... | 20.0 Hz, 1200 samples
 
-        Parameters:
-        -----------
+        """
 
+        self._request.message = Waveform(
+            station, channel, starttime, endtime
+        )
+
+        return self._request.submit(**kwargs)
+
+    def get_status(
+        self, station: str, channel: str, starttime, endtime=None, **kwargs
+    ) -> DataFrame:
+        """
+        Query the status dataselect service of the client.
+
+        Parameters
+        ----------
         station : `str`
             Select one or more SEED station codes. Multiple codes are
             comma-separated (e.g. "ANMO,PFO"). Wildcards are allowed.
@@ -240,20 +312,10 @@ class Client(object):
             of the time period, in seconds.
 
         Any additional keyword arguments will be passed to the request service.
-        """
 
-        self._request.message = Waveform(
-            station, channel, starttime, endtime
-        )
-
-        return self._request.submit(**kwargs)
-
-    def get_status(
-        self, station: str, channel: str, starttime, endtime=None, **kwargs
-    ) -> DataFrame:
-        """
-        Query the status dataselect service of the client.
-
+        Example
+        -------
+        >>> from pyvdms import Client
         >>> status = client.get_status('I18*', '*', '2020-02-02')
         >>> print(status)
            network station channel  %_Recvd  ...  samples      RMS        date
@@ -270,27 +332,6 @@ class Client(object):
         10   I18DK   I18L3     BDF  100.000  ...  1728000   3256.8  2020-02-02
         11   I18DK   I18L4     BDF  100.000  ...  1728000   3180.7  2020-02-02
 
-        Parameters:
-        -----------
-
-        station : `str`
-            Select one or more SEED station codes. Multiple codes are
-            comma-separated (e.g. "ANMO,PFO"). Wildcards are allowed.
-
-        channel : `str`
-            Select one or more SEED channel codes. Multiple codes are
-            comma-separated (e.g. "BHZ,HHZ,*N"). Wildcards are allowed.
-
-        starttime : various
-            Set the start time.
-
-        endtime : various, optional
-            Set the end time. If `None` (default), the start time is set
-            to midnight and the end time to the next day.
-            If ``endtime`` is of type `int` or `float` it defines the duration
-            of the time period, in seconds.
-
-        Any additional keyword arguments will be passed to the request service.
         """
 
         self._request.message = Chan_status(

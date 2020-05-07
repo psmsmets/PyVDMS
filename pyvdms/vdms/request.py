@@ -52,10 +52,26 @@ class Request(object):
         """
         Initializes a CTBTO VDMS request.
 
-        >>> request = Request(message)
+        Parameters
+        ----------
+        command_line_client : `str`
+            Set the VDMS request command line client, either the command name
+            or the full path. Defaults to 'nms_client'.
 
-        :type message: `str` or :class:
-        :param message: VDMS request message.
+        Example
+        -------
+        Create a request object without a message.
+        >>> from pyvdms import Request
+        >>> request = Request(None)
+
+        Create a request object and set the message by the message class name
+        >>> request = Request('Sta_info', station='I*', channel='BDF')
+
+        or provide a message class to have feedback on the message parameters.
+        >>> from pyvdms.messages import Sta_info
+        >>> msg = Sta_info('I*', 'BDF')
+        >>> request = Request(msg)
+
         """
         if message:
             self.set_message(message, **kwargs)
@@ -105,6 +121,15 @@ class Request(object):
     @property
     def message(self):
         """Get or set the request message.
+
+        Example
+        -------
+        Create a request object without a message and then set the message.
+        >>> from pyvdms import Request
+        >>> from pyvdms.messages import Sta_info
+        >>> request = Request(None)
+        >>> request.message = Sta_info('I*', 'BDF')
+
         """
         return self._message
 
@@ -129,6 +154,17 @@ class Request(object):
         **kwargs :
             Parameters passed to the new request message object, if ``message``
             is a string.
+
+        Example
+        -------
+        Create a request object without a message and then set the message.
+        >>> from pyvdms import Request
+        >>> request = Request(None)
+        >>> request.set_message('Sta_info', station='I*', channel='BDF')
+
+        or provide a message class
+        >>> from pyvdms.messages import Sta_info
+        >>> request.set_message(Sta_info('I*', 'BDF'))
 
         """
         if isinstance(message, str):

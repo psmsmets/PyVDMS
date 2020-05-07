@@ -49,7 +49,7 @@ Main pyvdms features listed per submodule:
 
   - ``verify``: generalized tuple range input validator.
 
-  - ``time``: extensions of ``pandas.to_datetime`` and a common method to set time ranges.
+  - ``time``: extension of ``pandas.to_datetime`` and a common method to set time ranges.
 
   - ``xml``: remove an xml element by a tag name and optionally by an attribute
     and its values.
@@ -84,7 +84,7 @@ Create a working (non-conflicting) Python 3.7 environment in conda as follows:
 
 .. code-block:: console
 
-    conda env create -f pyvdms.yml
+    conda env create -f environment.yml
 
 
 Path
