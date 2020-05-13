@@ -26,7 +26,7 @@ resp = waveforms2SDS(
     starttime='2020-02-02',
     endtime='2020-02-05',
     sds_root='../../data',
-    sds_threshold=60.,
+    threshold=60.,
     request_limit='2GB',
     # debug=True,
 )
