@@ -98,7 +98,7 @@ like to redefine the ``pyvdms-scheduler`` home directory.
 
 .. code-block:: console
 
-    export PYVDMS_HOME='path\to\pyvdms\scheduler\home'
+    export PYVDMS_HOME='path/to/pyvdms/scheduler/home'
 
 
 NMS Client
