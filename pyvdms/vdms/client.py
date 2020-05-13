@@ -138,8 +138,8 @@ class Client(object):
                     (ch.off_date >= end) | (ch.off_date.isnull())
                 )
             ]
-
-        ch = ch[(ch.channel == channel)]
+        pattern = channel.replace('*', '.*').replace('?', '.')
+        ch = ch[ch.channel.str.match(pattern)]
 
         return ch.reset_index(drop=True)
 
