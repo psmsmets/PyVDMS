@@ -217,7 +217,7 @@ class Request(object):
             return
 
         if not self._test_passed:
-            self._test_passed = self._test_request()
+            self._test_passed = self._test_client()
 
         self._status = 'SUBMITTED'
         self._num_bytes = 0
@@ -293,7 +293,7 @@ class Request(object):
 
         return result
 
-    def _test_request(self, command_line_client: str = None):
+    def _test_client(self, command_line_client: str = None):
         """
         Test the CTBTO VDMS command line client tool. You can specify the path
         and name by ``command_line_client``.
@@ -301,22 +301,36 @@ class Request(object):
         Returns `True` if the command line client has been executed
         successfully, otherwise `False`.
         """
+
         clc = command_line_client or self.command_line_client
         msg = f'Could not test run "{command_line_client} --help"!'
+
         # test 1: nms_client --help
         try:
+
             process = Popen([clc, '--help'], stdout=PIPE, stderr=PIPE)
             process.communicate()[0]
+
             if process.returncode != 0:
+
                 raise RuntimeError(msg)
+
         except Exception:
+
             raise RuntimeError(msg + 'Did you set the correct path?')
+
         # test 2: nms_client test.req
         try:
+
             process = Popen([clc, '--help'], stdout=PIPE, stderr=PIPE)
             process.communicate()[0]
+
             if process.returncode != 0:
+
                 raise RuntimeError(msg)
+
         except Exception:
+
             raise RuntimeError(msg + 'Did you set the correct path?')
+
         return True
