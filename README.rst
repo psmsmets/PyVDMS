@@ -119,6 +119,4 @@ License information
 ===================
 
 Copyright 2020 Pieter Smets.
-
-Licensed under the GNU GPLv3 License. See the ``LICENSE``- and ``NOTICE``-files
-or the documentation for more information.
+Licensed under the GNU GPLv3 License.
