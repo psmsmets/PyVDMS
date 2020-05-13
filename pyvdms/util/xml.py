@@ -17,7 +17,7 @@ __all__ = ['removeElementByTagName', 'removeElementAttribute']
 
 
 def removeElementByTagName(xmldoc: Document, tag: str, attr: str = None,
-                           values: list = None):
+                           regex: str = None, invert: bool = False):
     """Remove an xml element by its tag name, attribute and values.
     """
 
@@ -31,10 +31,12 @@ def removeElementByTagName(xmldoc: Document, tag: str, attr: str = None,
         if not isinstance(attr, str):
             raise TypeError('Attribute should be of type str!')
 
-        values = values or []
+        regex = regex or '.'  # match all
 
-        if not isinstance(values, list):
-            raise TypeError('Attribute values should be of type list!')
+        if not isinstance(regex, str):
+            raise TypeError('Regex should be of type str!')
+
+        r = re.compile(regex)
 
         for node in nodes:
 
@@ -42,7 +44,7 @@ def removeElementByTagName(xmldoc: Document, tag: str, attr: str = None,
 
                 continue
 
-            if values and node.getAttribute(attr) not in values:
+            if bool(r.match(node.getAttribute(attr))) is invert:
 
                 continue
 
@@ -57,7 +59,8 @@ def removeElementByTagName(xmldoc: Document, tag: str, attr: str = None,
             parent.removeChild(node)
 
 
-def removeElementAttribute(xmldoc: Document, tag: str, attr: str, regex: str):
+def removeElementAttribute(xmldoc: Document, tag: str, attr: str, regex: str,
+                           invert: bool = False):
     """Remove an xml element by its tag name, attribute and values.
     """
 
@@ -82,7 +85,7 @@ def removeElementAttribute(xmldoc: Document, tag: str, attr: str, regex: str):
 
             continue
 
-        if not r.match(node.getAttribute(attr)):
+        if bool(r.match(node.getAttribute(attr))) is invert:
 
             continue
 

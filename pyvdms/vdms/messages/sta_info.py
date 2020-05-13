@@ -91,7 +91,7 @@ class Sta_info(Message):
         badTags = [
             dict(tag='responseFAP'),
             dict(tag='stream', attr='code',
-                 values=['azb', 'cb', 'fsb', 'vlb']),
+                 regex=r'^[A-Z]{2}[0-9,A-Z]{1}$', invert=True),
         ]
 
         badAttrs = [
