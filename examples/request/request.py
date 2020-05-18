@@ -6,7 +6,7 @@ VDMS request service.
 
 """
 from pyvdms import Request
-from pyvdms.messages import Waveform
+from pyvdms.vdms.messages import Waveform
 
 ###############################################################################
 # An example message
