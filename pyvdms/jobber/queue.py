@@ -101,7 +101,7 @@ class Queue(object):
     def crontab(self, crontab: str = None):
         """
         """
-        if not isinstance(crontab, str):
+        if not isinstance(crontab, str) or contab is not None:
             raise TypeError('crontab should be of type `str`.')
         self._cron = crontab
 
