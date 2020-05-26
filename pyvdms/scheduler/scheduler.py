@@ -20,6 +20,8 @@ from ..jobber import Job, Queue
 
 __all__ = []
 
+__name__ = 'pyvdms-scheduler'
+
 conf_keys = {
     'starttime': str,
     'endtime': str,
@@ -45,7 +47,7 @@ params = dict(user=None, job=None, status=None, homedir=None,
 def usage():
     """Show usage.
     """
-    print("client_scheduler <action> "
+    print(f"{__name__} <action> "
           "[-d<dir> -j<job> -s<status> -u<user> -h] [args]")
     print("Actions : {}".format(', '.join(actions.keys())))
     print("Options:")
@@ -174,7 +176,7 @@ def cron_start(instant: bool = True):
     crontab = CronTab(user=True)
     cronjob = crontab.new(
         command=cmd,
-        comment=f'Auto created by client_scheduler on {now.isoformat()}',
+        comment=f'Auto created by {__name__} on {now.isoformat()}',
     )
     if system == 'Darwin' or system == 'Linux':
         cronjob.every(1).days()
@@ -199,7 +201,7 @@ def cron_stop():
     """
     if queue.crontab:
         crontab = CronTab(user=True)
-        for cronjob in crontab.find_command('client_scheduler'):
+        for cronjob in crontab.find_command(__name__):
             cronjob.delete()
         crontab.write()
         queue.crontab = None
@@ -230,7 +232,7 @@ def cron_run():
     """Queue run triggered by crontab. Runs the queue process and update
     the crontab time.
     """
-    print("Client_scheduler run triggered by crontab on",
+    print(f"{__name__} run triggered by crontab on",
           datetime.now().isoformat())
     run()
     if system == 'Linux' and queue.crontab:
