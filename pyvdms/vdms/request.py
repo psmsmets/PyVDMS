@@ -303,23 +303,9 @@ class Request(object):
         """
 
         clc = command_line_client or self.command_line_client
-        msg = f'Could not test run "{command_line_client} --help"!'
+        msg = f'Could not test run "{clc} --help"!'
 
         # test 1: nms_client --help
-        try:
-
-            process = Popen([clc, '--help'], stdout=PIPE, stderr=PIPE)
-            process.communicate()[0]
-
-            if process.returncode != 0:
-
-                raise RuntimeError(msg)
-
-        except Exception:
-
-            raise RuntimeError(msg + 'Did you set the correct path?')
-
-        # test 2: nms_client test.req
         try:
 
             process = Popen([clc, '--help'], stdout=PIPE, stderr=PIPE)
