@@ -113,7 +113,7 @@ class Job(object):
         self.request_limit = request_limit
 
         # set id
-        id = id or token_hex(5)
+        id = id or token(5) 
         if not isinstance(id, str):
             raise TypeError('Id should be of type `str`.')
         if not len(id) == 10:
@@ -483,3 +483,20 @@ class Job(object):
         """Convert Job to json.
         """
         return json.dumps(self.to_dict(), indent=4)
+
+
+def token(n: int = 5, min_alpha: int = 2):
+    """
+    Get a token with a minimum number of alpha characters.
+    """
+
+    # avoid numeric tokens with only e -> require 2 or more characters.
+    while True:
+
+        t = token_hex(n)
+
+        if sum(c.isalpha() for c in t) >= min_alpha:
+
+            break
+
+    return t

@@ -188,7 +188,7 @@ def cron_start(instant: bool = True):
         return
     cronjob.enable()
     crontab.write()
-    queue.set_crontab(str(crontab))
+    queue.crontab = str(crontab)
     queue.write_lock()
     print('Crontab added.')
     cron_info()
@@ -202,7 +202,7 @@ def cron_stop():
         for cronjob in crontab.find_command('client_scheduler'):
             cronjob.delete()
         crontab.write()
-        queue.set_crontab(None)
+        queue.crontab = None
         queue.write_lock()
         print('Crontab removed.')
     else:
