@@ -193,7 +193,6 @@ def waveforms2SDS(
             if sampling_error > 0.:
 
                 if not inconsistency:
-
                     log.warning(
                         '{} sample rate {:.3f} in archive inconsistent with '
                         'vdms inventory sample rate {:.3f}.'
@@ -208,7 +207,7 @@ def waveforms2SDS(
                 inconsistency = True
 
         if inconsistency:
-            stream2SDS(st, sds_root, verbose=False)
+            stream2SDS(st, sds_root, method='overwrite', verbose=False)
 
     try:
 
@@ -268,12 +267,10 @@ def waveforms2SDS(
 
                     # go to next item if 100%
                     if sds_avail == 1:
-
                         raise SkipItem
 
                     # direct request if no data availability
                     if not sds_avail > 0:
-
                         raise RequestItem
 
                     # get availability
@@ -316,25 +313,20 @@ def waveforms2SDS(
                         )
 
                         if vdms_sec - sds_sec >= threshold:
-
                             raise RequestItem
 
                     elif 86400 - sds_sec >= threshold:
-
                         raise RequestItem
 
                 except SkipItem:
-
                     continue
 
                 except RequestItem:
-
                     missing_items.append(item)
                     continue
 
             # Request missing items for day?
             if len(missing_items) == 0:
-
                 log.info('Nothing to add for this day.')
                 continue
 
@@ -359,12 +351,10 @@ def waveforms2SDS(
             request_size += request.size_bytes
 
             if isinstance(st, Stream):
-
-                stream2SDS(st, sds_root, verbose=False)
+                stream2SDS(st, sds_root, method='overwrite', verbose=False)
                 log.info('Added stream to archive')
 
             else:
-
                 log.info('No data returned')
 
             log.info(f'Request size is {request.size}')
