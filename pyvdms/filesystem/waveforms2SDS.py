@@ -351,8 +351,14 @@ def waveforms2SDS(
             request_size += request.size_bytes
 
             if isinstance(st, Stream):
-                stream2SDS(st, sds_root, method='overwrite', verbose=False)
-                log.info('Added stream to archive')
+                try:
+                    stream2SDS(st, sds_root, method='overwrite', verbose=False)
+                    log.info('Added stream to archive')
+                except Exception as e:
+                    if "Can't merge traces with same ids but" in str(e):
+                        log.info('Incompatible traces in stream: skipped day')
+                    else:
+                        raise e
 
             else:
                 log.info('No data returned')
