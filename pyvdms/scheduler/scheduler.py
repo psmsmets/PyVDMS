@@ -138,7 +138,7 @@ def add():
         queue.add(job)
         queue.write_lock()
         print('New job:')
-        print(job.details(True)
+        print(job.details(True))
         print('Entire queue:')
         index()
 
