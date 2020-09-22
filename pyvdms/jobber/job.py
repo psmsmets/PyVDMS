@@ -212,7 +212,7 @@ class Job(object):
     def priority(self, priority: int):
         """
         """
-        priority = priority or 1
+        priority = int(priority or 1)
 
         if not isinstance(priority, int):
             raise TypeError('priority should be of type `int`.')

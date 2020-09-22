@@ -137,7 +137,8 @@ def add():
     if job.ready:
         queue.add(job)
         queue.write_lock()
-        print('New job:', job.details(True))
+        print('New job:')
+        print(job.details(True)
         print('Entire queue:')
         index()
 
@@ -322,23 +323,16 @@ def init():
     system = platform.system()
 
     if params['homedir']:
-
         home = params['homedir']
-
     elif os.environ.get('PYVDMS_HOME'):
-
         home = os.environ.get('PYVDMS_HOME')
-
     else:
-
         home = '~/.pyvdms'
 
     if not os.path.isdir(home):
-
         print(f'Cannot find the directory "{home}". '
               'Either at the default location "~/.pyvdms" or specified by '
               'environment variable PYVDMS_HOME="~/.pyvdms".')
-
         raise SystemExit()
 
     home = os.path.abspath(home)

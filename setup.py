@@ -29,7 +29,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-           f'{NAME}-scheduler=pyvdms.scheduler.scheduler:main'
+           f'{NAME}-scheduler=pyvdms.scheduler.scheduler:main',
         ],
     },
     scripts=[],
